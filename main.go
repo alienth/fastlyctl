@@ -13,8 +13,23 @@ import (
 	"github.com/sethvargo/go-fastly"
 )
 
-func main() {
+var pendingVersions map[string]fastly.Version
 
+func prepareNewVersion(client *fastly.Client, s *fastly.Service) (fastly.Version, error) {
+	if version, ok := pendingVersions[s.ID]; ok {
+		return version, nil
+	}
+
+	// Otherwise, create a new version
+	newversion, err := client.CloneVersion(&fastly.CloneVersionInput{Service: s.ID, Version: strconv.Itoa(int(s.ActiveVersion))})
+	if err != nil {
+		return *newversion, err
+	}
+	pendingVersions[s.ID] = *newversion
+	return *newversion, nil
+}
+
+func main() {
 	client, err := fastly.NewClient(os.Getenv("FASTLY_KEY"))
 	if err != nil {
 		log.Fatal(err)
@@ -55,7 +70,8 @@ func main() {
 				}
 
 				fmt.Println(s.ID, activeVersion, v.Name)
-				newversion, err := client.CloneVersion(&fastly.CloneVersionInput{Service: s.ID, Version: activeVersion})
+				//newversion, err := client.CloneVersion(&fastly.CloneVersionInput{Service: s.ID, Version: activeVersion})
+				newversion, err := prepareNewVersion(client, s)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -65,19 +81,6 @@ func main() {
 			}
 
 		}
-
-		//		var input fastly.GetGeneratedVCLInput
-		//		input.Service = s.ID
-		//		input.Version = strconv.Itoa(int(s.ActiveVersion))
-		//		vcl, err := client.GetVCL(fastly.GetVCLInput{Service: s.ID, Version: strconv.Itoa(int(s.ActiveVersion))})
-		//
-		//		if err != nil {
-		//			log.Fatal(err)
-		//		}
-		//		ioutil.WriteFile(s.Name+".vcl", []byte(vcl.Content), 0644)
-		//
-		//		version, err := client.GetVersion(&fastly.GetVersionInput{Service: s.ID, Version: strconv.Itoa(int(s.ActiveVersion))})
-		//		fmt.Println(version)
 
 	}
 }
