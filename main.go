@@ -11,6 +11,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/imdario/mergo"
 	"github.com/sethvargo/go-fastly"
@@ -24,7 +25,7 @@ type SiteConfig struct {
 	SSLHostname string
 }
 
-func readConfig() {
+func readConfig() error {
 	//	var parsed interface{}
 	//	f, _ := os.Open("config.json")
 	//	dec := json.NewDecoder(f)
@@ -38,6 +39,22 @@ func readConfig() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	for name, config := range siteConfigs {
+		if name == "_default_" {
+			continue
+		}
+
+		if err := mergo.Merge(&config, siteConfigs["_default_"]); err != nil {
+			return err
+		}
+		siteConfigs[name] = config
+		for _, backend := range config.Backends {
+			backend.SSLHostname = strings.Replace(backend.SSLHostname, "_servicename_", name, -1)
+		}
+
+	}
+	return nil
 }
 
 func prepareNewVersion(client *fastly.Client, s *fastly.Service) (fastly.Version, error) {
@@ -119,9 +136,17 @@ func syncBackends(client *fastly.Client, s *fastly.Service, currentBackends []*f
 		i.Service = newversion.ServiceID
 		i.Version = newversion.Number
 		i.UseSSL = backend.UseSSL
-		if i.UseSSL && backend.SSLHostname != "" {
-			i.SSLHostname = backend.SSLHostname
-		}
+		i.SSLCheckCert = backend.SSLCheckCert
+		i.SSLSNIHostname = backend.SSLSNIHostname
+		i.SSLHostname = backend.SSLHostname
+		i.AutoLoadbalance = backend.AutoLoadbalance
+		i.Weight = backend.Weight
+		i.MaxConn = backend.MaxConn
+		i.ConnectTimeout = backend.ConnectTimeout
+		i.FirstByteTimeout = backend.FirstByteTimeout
+		i.BetweenBytesTimeout = backend.BetweenBytesTimeout
+		i.HealthCheck = backend.HealthCheck
+		i.RequestCondition = backend.RequestCondition
 		if _, err = client.CreateBackend(&i); err != nil {
 			return err
 		}
@@ -135,9 +160,6 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	var config SiteConfig
 	if _, ok := siteConfigs[s.Name]; ok {
 		config = siteConfigs[s.Name]
-		if err := mergo.Merge(&config, siteConfigs["_default_"]); err != nil {
-			return err
-		}
 	} else {
 		config = siteConfigs["_default_"]
 	}
@@ -158,7 +180,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	readConfig()
+	if err := readConfig(); err != nil {
+		log.Fatal(err)
+	}
 	pendingVersions = make(map[string]fastly.Version)
 
 	services, err := client.ListServices(&fastly.ListServicesInput{})
