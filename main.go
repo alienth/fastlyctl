@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/alienth/go-fastly"
 	"github.com/imdario/mergo"
-	"github.com/sethvargo/go-fastly"
 )
 
 var pendingVersions map[string]fastly.Version
