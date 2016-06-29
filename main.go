@@ -25,6 +25,7 @@ type SiteConfig struct {
 	Conditions    []*fastly.Condition
 	CacheSettings []*fastly.CacheSetting
 	Headers       []*fastly.Header
+	Domains       []*fastly.Domain
 	S3s           []*fastly.S3
 	SSLHostname   string
 }
@@ -50,6 +51,9 @@ func readConfig() error {
 		}
 		for _, s3 := range config.S3s {
 			s3.Path = strings.Replace(s3.Path, "_servicename_", name, -1)
+		}
+		for _, domain := range config.Domains {
+			domain.Name = strings.Replace(domain.Name, "_servicename_", name, -1)
 		}
 
 	}
@@ -132,6 +136,35 @@ func syncVcls(client *fastly.Client, s *fastly.Service) error {
 			if _, err = client.UpdateVCL(&fastly.UpdateVCLInput{Name: v.Name, Service: s.ID, Version: newversion.Number, Content: string(content)}); err != nil {
 				return err
 			}
+		}
+
+	}
+	return nil
+}
+
+func syncDomains(client *fastly.Client, s *fastly.Service, newDomains []*fastly.Domain) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	existingDomains, err := client.ListDomains(&fastly.ListDomainsInput{Service: s.ID, Version: newversion.Number})
+	for _, domain := range existingDomains {
+		err := client.DeleteDomain(&fastly.DeleteDomainInput{Service: s.ID, Name: domain.Name, Version: newversion.Number})
+		if err != nil {
+			return err
+		}
+	}
+	for _, domain := range newDomains {
+		var i fastly.CreateDomainInput
+
+		i.Name = domain.Name
+		i.Service = s.ID
+		i.Comment = domain.Comment
+		i.Version = newversion.Number
+
+		if _, err = client.CreateDomain(&i); err != nil {
+			return err
 		}
 
 	}
@@ -376,6 +409,16 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.S3s, remoteS3s) {
 		if err := syncS3s(client, s, config.S3s); err != nil {
+			return err
+		}
+	}
+
+	remoteDomains, _ := client.ListDomains(&fastly.ListDomainsInput{Service: s.ID, Version: activeVersion})
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(config.Domains, remoteDomains) {
+		if err := syncDomains(client, s, config.Domains); err != nil {
 			return err
 		}
 	}
