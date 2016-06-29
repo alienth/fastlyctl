@@ -21,15 +21,17 @@ var pendingVersions map[string]fastly.Version
 var siteConfigs map[string]SiteConfig
 
 type SiteConfig struct {
-	Backends      []*fastly.Backend
-	Conditions    []*fastly.Condition
-	CacheSettings []*fastly.CacheSetting
-	Headers       []*fastly.Header
-	Domains       []*fastly.Domain
-	S3s           []*fastly.S3
-	Settings      *fastly.Settings
-	Gzips         []*fastly.Gzip
-	SSLHostname   string
+	Settings         *fastly.Settings
+	Domains          []*fastly.Domain
+	Backends         []*fastly.Backend
+	Conditions       []*fastly.Condition
+	CacheSettings    []*fastly.CacheSetting
+	Headers          []*fastly.Header
+	S3s              []*fastly.S3
+	Gzips            []*fastly.Gzip
+	Directors        []*fastly.Director
+	DirectorBackends []*fastly.DirectorBackend
+	SSLHostname      string
 }
 
 func readConfig() error {
@@ -138,6 +140,38 @@ func syncVcls(client *fastly.Client, s *fastly.Service) error {
 			if _, err = client.UpdateVCL(&fastly.UpdateVCLInput{Name: v.Name, Service: s.ID, Version: newversion.Number, Content: string(content)}); err != nil {
 				return err
 			}
+		}
+
+	}
+	return nil
+}
+
+func syncDirectors(client *fastly.Client, s *fastly.Service, newDirectors []*fastly.Director) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	existingDirectors, err := client.ListDirectors(&fastly.ListDirectorsInput{Service: s.ID, Version: newversion.Number})
+	for _, director := range existingDirectors {
+		err := client.DeleteDirector(&fastly.DeleteDirectorInput{Service: s.ID, Name: director.Name, Version: newversion.Number})
+		if err != nil {
+			return err
+		}
+	}
+	for _, director := range newDirectors {
+		var i fastly.CreateDirectorInput
+
+		i.Name = director.Name
+		i.Version = newversion.Number
+		i.Service = s.ID
+		i.Type = director.Type
+		i.Comment = director.Comment
+		i.Quorum = director.Quorum
+		i.Retries = director.Retries
+
+		if _, err = client.CreateDirector(&i); err != nil {
+			return err
 		}
 
 	}
@@ -490,6 +524,16 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.Gzips, remoteGzips) {
 		if err := syncGzips(client, s, config.Gzips); err != nil {
+			return err
+		}
+	}
+
+	remoteDirectors, _ := client.ListDirectors(&fastly.ListDirectorsInput{Service: s.ID, Version: activeVersion})
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(config.Directors, remoteDirectors) {
+		if err := syncDirectors(client, s, config.Directors); err != nil {
 			return err
 		}
 	}
