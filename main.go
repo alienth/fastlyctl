@@ -24,6 +24,7 @@ type SiteConfig struct {
 	Backends      []*fastly.Backend
 	Conditions    []*fastly.Condition
 	CacheSettings []*fastly.CacheSetting
+	Headers       []*fastly.Header
 	SSLHostname   string
 }
 
@@ -135,6 +136,44 @@ func syncVcls(client *fastly.Client, s *fastly.Service) error {
 			if _, err = client.UpdateVCL(&fastly.UpdateVCLInput{Name: v.Name, Service: s.ID, Version: newversion.Number, Content: string(content)}); err != nil {
 				return err
 			}
+		}
+
+	}
+	return nil
+}
+
+func syncHeaders(client *fastly.Client, s *fastly.Service, newHeaders []*fastly.Header) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	existingHeaders, err := client.ListHeaders(&fastly.ListHeadersInput{Service: s.ID, Version: newversion.Number})
+	for _, setting := range existingHeaders {
+		err := client.DeleteHeader(&fastly.DeleteHeaderInput{Service: s.ID, Name: setting.Name, Version: newversion.Number})
+		if err != nil {
+			return err
+		}
+	}
+	for _, header := range newHeaders {
+		var i fastly.CreateHeaderInput
+		i.Name = header.Name
+		i.Type = header.Type
+		i.Regex = header.Regex
+		i.Destination = header.Destination
+		i.Source = header.Source
+		i.Action = header.Action
+		i.Version = newversion.Number
+		i.Service = s.ID
+		i.Priority = header.Priority
+		i.IgnoreIfSet = header.IgnoreIfSet
+		i.Substitution = header.Substitution
+		i.RequestCondition = header.RequestCondition
+		i.ResponseCondition = header.ResponseCondition
+		i.CacheCondition = header.CacheCondition
+
+		if _, err = client.CreateHeader(&i); err != nil {
+			return err
 		}
 
 	}
@@ -286,8 +325,17 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 
-	return nil
+	remoteHeaders, _ := client.ListHeaders(&fastly.ListHeadersInput{Service: s.ID, Version: activeVersion})
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(config.Headers, remoteHeaders) {
+		if err := syncHeaders(client, s, config.Headers); err != nil {
+			return err
+		}
+	}
 
+	return nil
 }
 
 func main() {
