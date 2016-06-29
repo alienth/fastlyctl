@@ -395,6 +395,9 @@ func main() {
 	pendingVersions = make(map[string]fastly.Version)
 
 	services, err := client.ListServices(&fastly.ListServicesInput{})
+	if err != nil {
+		log.Fatalf("Error listing services: %s", err)
+	}
 	for _, s := range services {
 		if err = syncVcls(client, s); err != nil {
 			log.Fatalf("Error syncing VCLs: %s", err)
