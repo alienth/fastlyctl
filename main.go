@@ -21,9 +21,10 @@ var pendingVersions map[string]fastly.Version
 var siteConfigs map[string]SiteConfig
 
 type SiteConfig struct {
-	Backends    []*fastly.Backend
-	Conditions  []*fastly.Condition
-	SSLHostname string
+	Backends      []*fastly.Backend
+	Conditions    []*fastly.Condition
+	CacheSettings []*fastly.CacheSetting
+	SSLHostname   string
 }
 
 func readConfig() error {
@@ -118,6 +119,36 @@ func syncVcls(client *fastly.Client, s *fastly.Service) error {
 	return nil
 }
 
+func syncCacheSettings(client *fastly.Client, s *fastly.Service, currentCacheSettings []*fastly.CacheSetting, newCacheSettings []*fastly.CacheSetting) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	for _, setting := range currentCacheSettings {
+		err := client.DeleteCacheSetting(&fastly.DeleteCacheSettingInput{Service: s.ID, Name: setting.Name, Version: newversion.Number})
+		if err != nil {
+			return err
+		}
+	}
+	for _, setting := range newCacheSettings {
+		var i fastly.CreateCacheSettingInput
+		i.TTL = setting.TTL
+		i.Name = setting.Name
+		i.Action = setting.Action
+		i.Service = s.ID
+		i.Version = newversion.Number
+		i.StaleTTL = setting.StaleTTL
+		i.CacheCondition = setting.CacheCondition
+
+		if _, err = client.CreateCacheSetting(&i); err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
 func syncConditions(client *fastly.Client, s *fastly.Service, currentConditions []*fastly.Condition, newConditions []*fastly.Condition) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
@@ -204,9 +235,22 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 			return err
 		}
 	}
-	remoteBackends, _ := client.ListBackends(&fastly.ListBackendsInput{Service: s.ID, Version: activeVersion})
+	remoteBackends, err := client.ListBackends(&fastly.ListBackendsInput{Service: s.ID, Version: activeVersion})
+	if err != nil {
+		return err
+	}
 	if !reflect.DeepEqual(config.Backends, remoteBackends) {
 		if err := syncBackends(client, s, remoteBackends, config.Backends); err != nil {
+			return err
+		}
+	}
+
+	remoteCacheSettings, _ := client.ListCacheSettings(&fastly.ListCacheSettingsInput{Service: s.ID, Version: activeVersion})
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(config.CacheSettings, remoteCacheSettings) {
+		if err := syncCacheSettings(client, s, remoteCacheSettings, config.CacheSettings); err != nil {
 			return err
 		}
 	}
