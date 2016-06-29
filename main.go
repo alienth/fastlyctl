@@ -27,6 +27,7 @@ type SiteConfig struct {
 	Headers       []*fastly.Header
 	Domains       []*fastly.Domain
 	S3s           []*fastly.S3
+	Settings      *fastly.Settings
 	SSLHostname   string
 }
 
@@ -139,6 +140,24 @@ func syncVcls(client *fastly.Client, s *fastly.Service) error {
 		}
 
 	}
+	return nil
+}
+
+func syncSettings(client *fastly.Client, s *fastly.Service, newSettings *fastly.Settings) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	var i fastly.UpdateSettingsInput
+	i.Service = s.ID
+	i.Version = newversion.Number
+	i.DefaultTTL = newSettings.DefaultTTL
+	i.DefaultHost = newSettings.DefaultHost
+	if _, err = client.UpdateSettings(&i); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -419,6 +438,16 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.Domains, remoteDomains) {
 		if err := syncDomains(client, s, config.Domains); err != nil {
+			return err
+		}
+	}
+
+	remoteSettings, _ := client.GetSettings(&fastly.GetSettingsInput{Service: s.ID, Version: activeVersion})
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(config.Settings, remoteSettings) {
+		if err := syncSettings(client, s, config.Settings); err != nil {
 			return err
 		}
 	}
