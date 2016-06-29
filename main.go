@@ -25,6 +25,7 @@ type SiteConfig struct {
 	Conditions    []*fastly.Condition
 	CacheSettings []*fastly.CacheSetting
 	Headers       []*fastly.Header
+	S3s           []*fastly.S3
 	SSLHostname   string
 }
 
@@ -54,6 +55,9 @@ func readConfig() error {
 		siteConfigs[name] = config
 		for _, backend := range config.Backends {
 			backend.SSLHostname = strings.Replace(backend.SSLHostname, "_servicename_", name, -1)
+		}
+		for _, s3 := range config.S3s {
+			s3.Path = strings.Replace(s3.Path, "_servicename_", name, -1)
 		}
 
 	}
@@ -136,6 +140,45 @@ func syncVcls(client *fastly.Client, s *fastly.Service) error {
 			if _, err = client.UpdateVCL(&fastly.UpdateVCLInput{Name: v.Name, Service: s.ID, Version: newversion.Number, Content: string(content)}); err != nil {
 				return err
 			}
+		}
+
+	}
+	return nil
+}
+
+func syncS3s(client *fastly.Client, s *fastly.Service, newS3s []*fastly.S3) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	existingS3s, err := client.ListS3s(&fastly.ListS3sInput{Service: s.ID, Version: newversion.Number})
+	for _, s3 := range existingS3s {
+		err := client.DeleteS3(&fastly.DeleteS3Input{Service: s.ID, Name: s3.Name, Version: newversion.Number})
+		if err != nil {
+			return err
+		}
+	}
+	for _, s3 := range newS3s {
+		var i fastly.CreateS3Input
+
+		i.Name = s3.Name
+		i.Service = s.ID
+		i.Version = newversion.Number
+		i.Path = s3.Path
+		i.Format = s3.Format
+		i.Period = s3.Period
+		i.TimestampFormat = s3.TimestampFormat
+		i.BucketName = s3.BucketName
+		i.AccessKey = s3.AccessKey
+		i.GzipLevel = s3.GzipLevel
+		i.SecretKey = s3.SecretKey
+		i.Domain = s3.Domain
+		i.ResponseCondition = s3.ResponseCondition
+		i.Redundancy = s3.Redundancy
+
+		if _, err = client.CreateS3(&i); err != nil {
+			return err
 		}
 
 	}
@@ -331,6 +374,16 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.Headers, remoteHeaders) {
 		if err := syncHeaders(client, s, config.Headers); err != nil {
+			return err
+		}
+	}
+
+	remoteS3s, _ := client.ListS3s(&fastly.ListS3sInput{Service: s.ID, Version: activeVersion})
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(config.S3s, remoteS3s) {
+		if err := syncS3s(client, s, config.S3s); err != nil {
 			return err
 		}
 	}
