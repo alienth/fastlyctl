@@ -59,14 +59,36 @@ func readConfig() error {
 	return nil
 }
 
+const versionComment string = "fastly-ctl"
+
 func prepareNewVersion(client *fastly.Client, s *fastly.Service) (fastly.Version, error) {
+	// See if we've already prepared a version
 	if version, ok := pendingVersions[s.ID]; ok {
 		return version, nil
+	}
+
+	// Look for an inactive version higher than our current version
+	versions, err := client.ListVersions(&fastly.ListVersionsInput{Service: s.ID})
+	if err != nil {
+		return fastly.Version{}, err
+	}
+	for _, v := range versions {
+		versionNumber, err := strconv.Atoi(v.Number)
+		if err != nil {
+			return fastly.Version{}, fmt.Errorf("Invalid version number encountered: %s", err)
+		}
+		if uint(versionNumber) > s.ActiveVersion && v.Comment == versionComment && !v.Active && !v.Locked {
+			pendingVersions[s.ID] = *v
+			return *v, nil
+		}
 	}
 
 	// Otherwise, create a new version
 	newversion, err := client.CloneVersion(&fastly.CloneVersionInput{Service: s.ID, Version: strconv.Itoa(int(s.ActiveVersion))})
 	if err != nil {
+		return *newversion, err
+	}
+	if _, err := client.UpdateVersion(&fastly.UpdateVersionInput{Service: s.ID, Version: newversion.Number, Comment: versionComment}); err != nil {
 		return *newversion, err
 	}
 	pendingVersions[s.ID] = *newversion
@@ -119,13 +141,14 @@ func syncVcls(client *fastly.Client, s *fastly.Service) error {
 	return nil
 }
 
-func syncCacheSettings(client *fastly.Client, s *fastly.Service, currentCacheSettings []*fastly.CacheSetting, newCacheSettings []*fastly.CacheSetting) error {
+func syncCacheSettings(client *fastly.Client, s *fastly.Service, newCacheSettings []*fastly.CacheSetting) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
 	}
 
-	for _, setting := range currentCacheSettings {
+	existingCacheSettings, err := client.ListCacheSettings(&fastly.ListCacheSettingsInput{Service: s.ID, Version: newversion.Number})
+	for _, setting := range existingCacheSettings {
 		err := client.DeleteCacheSetting(&fastly.DeleteCacheSettingInput{Service: s.ID, Name: setting.Name, Version: newversion.Number})
 		if err != nil {
 			return err
@@ -149,13 +172,17 @@ func syncCacheSettings(client *fastly.Client, s *fastly.Service, currentCacheSet
 	return nil
 }
 
-func syncConditions(client *fastly.Client, s *fastly.Service, currentConditions []*fastly.Condition, newConditions []*fastly.Condition) error {
+func syncConditions(client *fastly.Client, s *fastly.Service, newConditions []*fastly.Condition) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
 	}
 
-	for _, condition := range currentConditions {
+	existingConditions, err := client.ListConditions(&fastly.ListConditionsInput{Service: s.ID, Version: newversion.Number})
+	if err != nil {
+		return err
+	}
+	for _, condition := range existingConditions {
 		err := client.DeleteCondition(&fastly.DeleteConditionInput{Service: s.ID, Name: condition.Name, Version: newversion.Number})
 		if err != nil {
 			return err
@@ -177,13 +204,17 @@ func syncConditions(client *fastly.Client, s *fastly.Service, currentConditions 
 	return nil
 }
 
-func syncBackends(client *fastly.Client, s *fastly.Service, currentBackends []*fastly.Backend, newBackends []*fastly.Backend) error {
+func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []*fastly.Backend) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
 	}
 
-	for _, backend := range currentBackends {
+	existingBackends, err := client.ListBackends(&fastly.ListBackendsInput{Service: s.ID, Version: newversion.Number})
+	if err != nil {
+		return err
+	}
+	for _, backend := range existingBackends {
 		err := client.DeleteBackend(&fastly.DeleteBackendInput{Service: s.ID, Name: backend.Name, Version: newversion.Number})
 		if err != nil {
 			return err
@@ -231,8 +262,8 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	// Conditions must be sync'd first, as if they're referenced in any other setup
 	// the API will reject if they don't exist.
 	if !reflect.DeepEqual(config.Conditions, remoteConditions) {
-		if err := syncConditions(client, s, remoteConditions, config.Conditions); err != nil {
-			return err
+		if err := syncConditions(client, s, config.Conditions); err != nil {
+			return fmt.Errorf("Error syncing conditions: %s", err)
 		}
 	}
 	remoteBackends, err := client.ListBackends(&fastly.ListBackendsInput{Service: s.ID, Version: activeVersion})
@@ -240,7 +271,7 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 		return err
 	}
 	if !reflect.DeepEqual(config.Backends, remoteBackends) {
-		if err := syncBackends(client, s, remoteBackends, config.Backends); err != nil {
+		if err := syncBackends(client, s, config.Backends); err != nil {
 			return err
 		}
 	}
@@ -250,7 +281,7 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 		return err
 	}
 	if !reflect.DeepEqual(config.CacheSettings, remoteCacheSettings) {
-		if err := syncCacheSettings(client, s, remoteCacheSettings, config.CacheSettings); err != nil {
+		if err := syncCacheSettings(client, s, config.CacheSettings); err != nil {
 			return err
 		}
 	}
