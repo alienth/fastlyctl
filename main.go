@@ -22,6 +22,7 @@ var siteConfigs map[string]SiteConfig
 
 type SiteConfig struct {
 	Backends    []*fastly.Backend
+	Conditions  []*fastly.Condition
 	SSLHostname string
 }
 
@@ -117,6 +118,34 @@ func syncVcls(client *fastly.Client, s *fastly.Service) error {
 	return nil
 }
 
+func syncConditions(client *fastly.Client, s *fastly.Service, currentConditions []*fastly.Condition, newConditions []*fastly.Condition) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	for _, condition := range currentConditions {
+		err := client.DeleteCondition(&fastly.DeleteConditionInput{Service: s.ID, Name: condition.Name, Version: newversion.Number})
+		if err != nil {
+			return err
+		}
+	}
+	for _, condition := range newConditions {
+		var i fastly.CreateConditionInput
+		i.Name = condition.Name
+		i.Type = condition.Type
+		i.Service = s.ID
+		i.Version = newversion.Number
+		i.Priority = condition.Priority
+		i.Statement = condition.Statement
+		if _, err = client.CreateCondition(&i); err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
 func syncBackends(client *fastly.Client, s *fastly.Service, currentBackends []*fastly.Backend, newBackends []*fastly.Backend) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
@@ -162,6 +191,18 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 		config = siteConfigs[s.Name]
 	} else {
 		config = siteConfigs["_default_"]
+	}
+
+	remoteConditions, err := client.ListConditions(&fastly.ListConditionsInput{Service: s.ID, Version: activeVersion})
+	if err != nil {
+		return err
+	}
+	// Conditions must be sync'd first, as if they're referenced in any other setup
+	// the API will reject if they don't exist.
+	if !reflect.DeepEqual(config.Conditions, remoteConditions) {
+		if err := syncConditions(client, s, remoteConditions, config.Conditions); err != nil {
+			return err
+		}
 	}
 	remoteBackends, _ := client.ListBackends(&fastly.ListBackendsInput{Service: s.ID, Version: activeVersion})
 	if !reflect.DeepEqual(config.Backends, remoteBackends) {
