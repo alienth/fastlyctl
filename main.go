@@ -146,6 +146,28 @@ func syncVcls(client *fastly.Client, s *fastly.Service) error {
 	return nil
 }
 
+func syncDirectorBackends(client *fastly.Client, s *fastly.Service, newMappings []*fastly.DirectorBackend) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	for _, mapping := range newMappings {
+		var i fastly.CreateDirectorBackendInput
+
+		i.Service = s.ID
+		i.Version = newversion.Number
+		i.Backend = mapping.Backend
+		i.Director = mapping.Director
+
+		if _, err = client.CreateDirectorBackend(&i); err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
 func syncDirectors(client *fastly.Client, s *fastly.Service, newDirectors []*fastly.Director) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
@@ -532,8 +554,25 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(config.Directors, remoteDirectors) {
+	mappingsInSync := true
+	for _, directorBackend := range config.DirectorBackends {
+		// There is no way to list the DirectorBackend mappings, so we have to fetch
+		// each and look for 404s.
+		resp, err := client.Request("GET", fmt.Sprintf("/service/%s/version/%s/director/%s/backend/%s", s.ID, activeVersion, directorBackend.Director, directorBackend.Backend), nil)
+		if err != nil && resp.StatusCode == 404 {
+			mappingsInSync = false
+		} else if err != nil {
+			return err
+		}
+	}
+	if !reflect.DeepEqual(config.Directors, remoteDirectors) || !mappingsInSync {
+		fmt.Println("syncing directors")
 		if err := syncDirectors(client, s, config.Directors); err != nil {
+			return err
+		}
+		// Syncing directors will initially delete all directors, which implicitly
+		// deletes all of the directorbackend mappings. As such, we must recreate.
+		if err := syncDirectorBackends(client, s, config.DirectorBackends); err != nil {
 			return err
 		}
 	}
