@@ -28,6 +28,7 @@ type SiteConfig struct {
 	Domains       []*fastly.Domain
 	S3s           []*fastly.S3
 	Settings      *fastly.Settings
+	Gzips         []*fastly.Gzip
 	SSLHostname   string
 }
 
@@ -137,6 +138,37 @@ func syncVcls(client *fastly.Client, s *fastly.Service) error {
 			if _, err = client.UpdateVCL(&fastly.UpdateVCLInput{Name: v.Name, Service: s.ID, Version: newversion.Number, Content: string(content)}); err != nil {
 				return err
 			}
+		}
+
+	}
+	return nil
+}
+
+func syncGzips(client *fastly.Client, s *fastly.Service, newGzips []*fastly.Gzip) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	existingGzips, err := client.ListGzips(&fastly.ListGzipsInput{Service: s.ID, Version: newversion.Number})
+	for _, gzip := range existingGzips {
+		err := client.DeleteGzip(&fastly.DeleteGzipInput{Service: s.ID, Name: gzip.Name, Version: newversion.Number})
+		if err != nil {
+			return err
+		}
+	}
+	for _, gzip := range newGzips {
+		var i fastly.CreateGzipInput
+
+		i.Name = gzip.Name
+		i.Version = newversion.Number
+		i.Service = s.ID
+		i.Extensions = gzip.Extensions
+		i.ContentTypes = gzip.ContentTypes
+		i.CacheCondition = gzip.CacheCondition
+
+		if _, err = client.CreateGzip(&i); err != nil {
+			return err
 		}
 
 	}
@@ -448,6 +480,16 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.Settings, remoteSettings) {
 		if err := syncSettings(client, s, config.Settings); err != nil {
+			return err
+		}
+	}
+
+	remoteGzips, _ := client.ListGzips(&fastly.ListGzipsInput{Service: s.ID, Version: activeVersion})
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(config.Gzips, remoteGzips) {
+		if err := syncGzips(client, s, config.Gzips); err != nil {
 			return err
 		}
 	}
