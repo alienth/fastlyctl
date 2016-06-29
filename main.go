@@ -30,18 +30,10 @@ type SiteConfig struct {
 }
 
 func readConfig() error {
-	//	var parsed interface{}
-	//	f, _ := os.Open("config.json")
-	//	dec := json.NewDecoder(f)
-	//	if err := dec.Decode(&parsed); err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	fmt.Println(parsed)
-
 	body, _ := ioutil.ReadFile("config.json")
 	err := json.Unmarshal(body, &siteConfigs)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	for name, config := range siteConfigs {
@@ -398,17 +390,17 @@ func main() {
 	}
 
 	if err := readConfig(); err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error reading config file: %s", err)
 	}
 	pendingVersions = make(map[string]fastly.Version)
 
 	services, err := client.ListServices(&fastly.ListServicesInput{})
 	for _, s := range services {
 		if err = syncVcls(client, s); err != nil {
-			log.Fatal(err)
+			log.Fatalf("Error syncing VCLs: %s", err)
 		}
 		if err = syncConfig(client, s); err != nil {
-			log.Fatal(err)
+			log.Fatalf("Error syncing service config: %s", err)
 		}
 	}
 }
