@@ -31,6 +31,7 @@ type SiteConfig struct {
 	Gzips            []*fastly.Gzip
 	Directors        []*fastly.Director
 	DirectorBackends []*fastly.DirectorBackend
+	HealthChecks     []*fastly.HealthCheck
 	SSLHostname      string
 }
 
@@ -140,6 +141,44 @@ func syncVcls(client *fastly.Client, s *fastly.Service) error {
 			if _, err = client.UpdateVCL(&fastly.UpdateVCLInput{Name: v.Name, Service: s.ID, Version: newversion.Number, Content: string(content)}); err != nil {
 				return err
 			}
+		}
+
+	}
+	return nil
+}
+
+func syncHealthChecks(client *fastly.Client, s *fastly.Service, newHealthChecks []*fastly.HealthCheck) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	existingHealthChecks, err := client.ListHealthChecks(&fastly.ListHealthChecksInput{Service: s.ID, Version: newversion.Number})
+	for _, healthCheck := range existingHealthChecks {
+		err := client.DeleteHealthCheck(&fastly.DeleteHealthCheckInput{Service: s.ID, Name: healthCheck.Name, Version: newversion.Number})
+		if err != nil {
+			return err
+		}
+	}
+	for _, healthCheck := range newHealthChecks {
+		var i fastly.CreateHealthCheckInput
+
+		i.Name = healthCheck.Name
+		i.Version = newversion.Number
+		i.Service = s.ID
+		i.Host = healthCheck.Host
+		i.Path = healthCheck.Host
+		i.ExpectedResponse = healthCheck.ExpectedResponse
+		i.CheckInterval = healthCheck.CheckInterval
+		i.HTTPVersion = healthCheck.HTTPVersion
+		i.Threshold = healthCheck.Threshold
+		i.Initial = healthCheck.Initial
+		i.Timeout = healthCheck.Timeout
+		i.Window = healthCheck.Window
+		i.Method = healthCheck.Method
+
+		if _, err = client.CreateHealthCheck(&i); err != nil {
+			return err
 		}
 
 	}
@@ -469,23 +508,24 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 		config = siteConfigs["_default_"]
 	}
 
+	// Conditions, health checks, and cache settings must be sync'd first, as if they're
+	// referenced in any other object the API will balk if they don't exist.
 	remoteConditions, err := client.ListConditions(&fastly.ListConditionsInput{Service: s.ID, Version: activeVersion})
 	if err != nil {
 		return err
 	}
-	// Conditions must be sync'd first, as if they're referenced in any other setup
-	// the API will reject if they don't exist.
 	if !reflect.DeepEqual(config.Conditions, remoteConditions) {
 		if err := syncConditions(client, s, config.Conditions); err != nil {
 			return fmt.Errorf("Error syncing conditions: %s", err)
 		}
 	}
-	remoteBackends, err := client.ListBackends(&fastly.ListBackendsInput{Service: s.ID, Version: activeVersion})
+
+	remoteHealthChecks, _ := client.ListHealthChecks(&fastly.ListHealthChecksInput{Service: s.ID, Version: activeVersion})
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(config.Backends, remoteBackends) {
-		if err := syncBackends(client, s, config.Backends); err != nil {
+	if !reflect.DeepEqual(config.HealthChecks, remoteHealthChecks) {
+		if err := syncHealthChecks(client, s, config.HealthChecks); err != nil {
 			return err
 		}
 	}
@@ -496,6 +536,16 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.CacheSettings, remoteCacheSettings) {
 		if err := syncCacheSettings(client, s, config.CacheSettings); err != nil {
+			return err
+		}
+	}
+
+	remoteBackends, err := client.ListBackends(&fastly.ListBackendsInput{Service: s.ID, Version: activeVersion})
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(config.Backends, remoteBackends) {
+		if err := syncBackends(client, s, config.Backends); err != nil {
 			return err
 		}
 	}
@@ -566,7 +616,6 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 	if !reflect.DeepEqual(config.Directors, remoteDirectors) || !mappingsInSync {
-		fmt.Println("syncing directors")
 		if err := syncDirectors(client, s, config.Directors); err != nil {
 			return err
 		}
