@@ -28,6 +28,11 @@ type SiteConfig struct {
 	CacheSettings    []*fastly.CacheSetting
 	Headers          []*fastly.Header
 	S3s              []*fastly.S3
+	FTPs             []*fastly.FTP
+	GCSs             []*fastly.GCS
+	Papertrails      []*fastly.Papertrail
+	Sumologics       []*fastly.Sumologic
+	Syslogs          []*fastly.Syslog
 	Gzips            []*fastly.Gzip
 	Directors        []*fastly.Director
 	DirectorBackends []*fastly.DirectorBackend
@@ -317,6 +322,177 @@ func syncDomains(client *fastly.Client, s *fastly.Service, newDomains []*fastly.
 	return nil
 }
 
+func syncSyslogs(client *fastly.Client, s *fastly.Service, newSyslogs []*fastly.Syslog) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	existingSyslogs, err := client.ListSyslogs(&fastly.ListSyslogsInput{Service: s.ID, Version: newversion.Number})
+	for _, syslog := range existingSyslogs {
+		err := client.DeleteSyslog(&fastly.DeleteSyslogInput{Service: s.ID, Name: syslog.Name, Version: newversion.Number})
+		if err != nil {
+			return err
+		}
+	}
+	for _, syslog := range newSyslogs {
+		var i fastly.CreateSyslogInput
+
+		i.Name = syslog.Name
+		i.Service = s.ID
+		i.Version = newversion.Number
+		i.Address = syslog.Address
+		i.Port = syslog.Port
+		i.UseTLS = fastly.Compatibool(syslog.UseTLS)
+		i.TLSCACert = syslog.TLSCACert
+		i.Token = syslog.Token
+		i.Format = syslog.Format
+		i.ResponseCondition = syslog.ResponseCondition
+
+		if _, err = client.CreateSyslog(&i); err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
+func syncPapertrails(client *fastly.Client, s *fastly.Service, newPapertrails []*fastly.Papertrail) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	existingPapertrails, err := client.ListPapertrails(&fastly.ListPapertrailsInput{Service: s.ID, Version: newversion.Number})
+	for _, papertrail := range existingPapertrails {
+		err := client.DeletePapertrail(&fastly.DeletePapertrailInput{Service: s.ID, Name: papertrail.Name, Version: newversion.Number})
+		if err != nil {
+			return err
+		}
+	}
+	for _, papertrail := range newPapertrails {
+		var i fastly.CreatePapertrailInput
+
+		i.Name = papertrail.Name
+		i.Service = s.ID
+		i.Version = newversion.Number
+		i.Address = papertrail.Address
+		i.Port = papertrail.Port
+		i.Format = papertrail.Format
+		i.ResponseCondition = papertrail.ResponseCondition
+
+		if _, err = client.CreatePapertrail(&i); err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
+func syncSumologics(client *fastly.Client, s *fastly.Service, newSumologics []*fastly.Sumologic) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	existingSumologics, err := client.ListSumologics(&fastly.ListSumologicsInput{Service: s.ID, Version: newversion.Number})
+	for _, sumologic := range existingSumologics {
+		err := client.DeleteSumologic(&fastly.DeleteSumologicInput{Service: s.ID, Name: sumologic.Name, Version: newversion.Number})
+		if err != nil {
+			return err
+		}
+	}
+	for _, sumologic := range newSumologics {
+		var i fastly.CreateSumologicInput
+
+		i.Name = sumologic.Name
+		i.Service = s.ID
+		i.Version = newversion.Number
+		i.Address = sumologic.Address
+		i.Format = sumologic.Format
+		i.URL = sumologic.URL
+		i.ResponseCondition = sumologic.ResponseCondition
+
+		if _, err = client.CreateSumologic(&i); err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
+func syncFTPs(client *fastly.Client, s *fastly.Service, newFTPs []*fastly.FTP) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	existingFTPs, err := client.ListFTPs(&fastly.ListFTPsInput{Service: s.ID, Version: newversion.Number})
+	for _, ftp := range existingFTPs {
+		err := client.DeleteFTP(&fastly.DeleteFTPInput{Service: s.ID, Name: ftp.Name, Version: newversion.Number})
+		if err != nil {
+			return err
+		}
+	}
+	for _, ftp := range newFTPs {
+		var i fastly.CreateFTPInput
+
+		i.Name = ftp.Name
+		i.Service = s.ID
+		i.Version = newversion.Number
+		i.Path = ftp.Path
+		i.Format = ftp.Format
+		i.Period = ftp.Period
+		i.TimestampFormat = ftp.TimestampFormat
+		i.Username = ftp.Username
+		i.Password = ftp.Password
+		i.Address = ftp.Address
+		i.GzipLevel = ftp.GzipLevel
+		i.ResponseCondition = ftp.ResponseCondition
+
+		if _, err = client.CreateFTP(&i); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func syncGCSs(client *fastly.Client, s *fastly.Service, newGCSs []*fastly.GCS) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	existingGCSs, err := client.ListGCSs(&fastly.ListGCSsInput{Service: s.ID, Version: newversion.Number})
+	for _, gcs := range existingGCSs {
+		err := client.DeleteGCS(&fastly.DeleteGCSInput{Service: s.ID, Name: gcs.Name, Version: newversion.Number})
+		if err != nil {
+			return err
+		}
+	}
+	for _, gcs := range newGCSs {
+		var i fastly.CreateGCSInput
+
+		i.Name = gcs.Name
+		i.Service = s.ID
+		i.Version = newversion.Number
+		i.Path = gcs.Path
+		i.Format = gcs.Format
+		i.Period = gcs.Period
+		i.TimestampFormat = gcs.TimestampFormat
+		i.Bucket = gcs.Bucket
+		i.GzipLevel = gcs.GzipLevel
+		i.SecretKey = gcs.SecretKey
+		i.ResponseCondition = gcs.ResponseCondition
+
+		if _, err = client.CreateGCS(&i); err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
 func syncS3s(client *fastly.Client, s *fastly.Service, newS3s []*fastly.S3) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
@@ -556,6 +732,56 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.Headers, remoteHeaders) {
 		if err := syncHeaders(client, s, config.Headers); err != nil {
+			return err
+		}
+	}
+
+	remoteSyslogs, _ := client.ListSyslogs(&fastly.ListSyslogsInput{Service: s.ID, Version: activeVersion})
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(config.Syslogs, remoteSyslogs) {
+		if err := syncSyslogs(client, s, config.Syslogs); err != nil {
+			return err
+		}
+	}
+
+	remotePapertrails, _ := client.ListPapertrails(&fastly.ListPapertrailsInput{Service: s.ID, Version: activeVersion})
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(config.Papertrails, remotePapertrails) {
+		if err := syncPapertrails(client, s, config.Papertrails); err != nil {
+			return err
+		}
+	}
+
+	remoteSumologics, _ := client.ListSumologics(&fastly.ListSumologicsInput{Service: s.ID, Version: activeVersion})
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(config.Sumologics, remoteSumologics) {
+		if err := syncSumologics(client, s, config.Sumologics); err != nil {
+			return err
+		}
+	}
+
+	remoteFTPs, _ := client.ListFTPs(&fastly.ListFTPsInput{Service: s.ID, Version: activeVersion})
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(config.FTPs, remoteFTPs) {
+		if err := syncFTPs(client, s, config.FTPs); err != nil {
+			return err
+		}
+	}
+
+	remoteGCSs, _ := client.ListGCSs(&fastly.ListGCSsInput{Service: s.ID, Version: activeVersion})
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(config.GCSs, remoteGCSs) {
+		if err := syncGCSs(client, s, config.GCSs); err != nil {
 			return err
 		}
 	}
