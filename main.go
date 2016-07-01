@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/BurntSushi/toml"
 	"github.com/alienth/go-fastly"
 	"github.com/imdario/mergo"
 )
@@ -45,11 +46,18 @@ type SiteConfig struct {
 	SSLCertHostname string
 }
 
-func readConfig() error {
-	body, _ := ioutil.ReadFile("config.json")
-	err := json.Unmarshal(body, &siteConfigs)
-	if err != nil {
-		return err
+func readConfig(file string) error {
+	body, _ := ioutil.ReadFile(file)
+	if strings.HasSuffix(file, ".toml") {
+		if err := toml.Unmarshal(body, &siteConfigs); err != nil {
+			return fmt.Errorf("toml parsing error: %s\n", err)
+		}
+	} else if strings.HasSuffix(file, ".json") {
+		if err := json.Unmarshal(body, &siteConfigs); err != nil {
+			return fmt.Errorf("json parsing error: %s\n", err)
+		}
+	} else {
+		return fmt.Errorf("Unknown config file type for file %s\n", file)
 	}
 
 	for name, config := range siteConfigs {
