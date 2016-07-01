@@ -81,6 +81,10 @@ func readConfig(file string) error {
 		for _, domain := range config.Domains {
 			domain.Name = strings.Replace(domain.Name, "_servicename_", name, -1)
 		}
+		for _, s3 := range config.S3s {
+			s3.BucketName = strings.Replace(s3.BucketName, "_servicename_", name, -1)
+			s3.Path = strings.Replace(s3.Path, "_servicename_", name, -1)
+		}
 
 	}
 	return nil
