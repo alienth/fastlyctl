@@ -37,12 +37,12 @@ type SiteConfig struct {
 	Directors        []*fastly.Director
 	DirectorBackends []*fastly.DirectorBackend
 	HealthChecks     []*fastly.HealthCheck
-	
-	// Override for backend SSLHostnames
+
+	// Override for backend SSLCertHostnames
 	// Used in cases where _servicename_ is not sufficient for defining
 	// an SSL hostname, such as when Fastly has a cert which we do not
 	// have on the origin.
-	SSLHostname      string
+	SSLCertHostname string
 }
 
 func readConfig() error {
@@ -62,7 +62,10 @@ func readConfig() error {
 		}
 		siteConfigs[name] = config
 		for _, backend := range config.Backends {
-			backend.SSLHostname = strings.Replace(backend.SSLHostname, "_servicename_", name, -1)
+			if config.SSLCertHostname != "" {
+				backend.SSLCertHostname = config.SSLCertHostname
+			}
+			backend.SSLCertHostname = strings.Replace(backend.SSLCertHostname, "_servicename_", name, -1)
 		}
 		for _, s3 := range config.S3s {
 			s3.Path = strings.Replace(s3.Path, "_servicename_", name, -1)
