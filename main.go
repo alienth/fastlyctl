@@ -37,6 +37,11 @@ type SiteConfig struct {
 	Directors        []*fastly.Director
 	DirectorBackends []*fastly.DirectorBackend
 	HealthChecks     []*fastly.HealthCheck
+	
+	// Override for backend SSLHostnames
+	// Used in cases where _servicename_ is not sufficient for defining
+	// an SSL hostname, such as when Fastly has a cert which we do not
+	// have on the origin.
 	SSLHostname      string
 }
 
