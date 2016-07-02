@@ -554,6 +554,9 @@ func syncHeaders(client *fastly.Client, s *fastly.Service, newHeaders []*fastly.
 		}
 	}
 	for _, header := range newHeaders {
+		if *header == (fastly.Header{}) {
+			continue
+		}
 		var i fastly.CreateHeaderInput
 		i.Name = header.Name
 		i.Type = header.Type
@@ -592,6 +595,9 @@ func syncCacheSettings(client *fastly.Client, s *fastly.Service, newCacheSetting
 		}
 	}
 	for _, setting := range newCacheSettings {
+		if *setting == (fastly.CacheSetting{}) {
+			continue
+		}
 		var i fastly.CreateCacheSettingInput
 		i.TTL = setting.TTL
 		i.Name = setting.Name
