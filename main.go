@@ -631,15 +631,16 @@ func syncConditions(client *fastly.Client, s *fastly.Service, newConditions []*f
 	if err != nil {
 		return err
 	}
+	r := strings.NewReplacer("/", "%2f")
 	for _, condition := range existingConditions {
-		err := client.DeleteCondition(&fastly.DeleteConditionInput{Service: s.ID, Name: condition.Name, Version: newversion.Number})
+		err := client.DeleteCondition(&fastly.DeleteConditionInput{Service: s.ID, Name: r.Replace(condition.Name), Version: newversion.Number})
 		if err != nil {
 			return err
 		}
 	}
 	for _, condition := range newConditions {
 		var i fastly.CreateConditionInput
-		i.Name = condition.Name
+		i.Name = r.Replace(condition.Name)
 		i.Type = condition.Type
 		i.Service = s.ID
 		i.Version = newversion.Number
