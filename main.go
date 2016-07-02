@@ -925,7 +925,7 @@ func main() {
 	}
 
 	debug = true
-	if err := readConfig(); err != nil {
+	if err := readConfig("config.toml"); err != nil {
 		log.Fatalf("Error reading config file: %s", err)
 	}
 	pendingVersions = make(map[string]fastly.Version)
