@@ -576,7 +576,7 @@ func syncHeaders(client *fastly.Client, s *fastly.Service, newHeaders []*fastly.
 		i.Version = newversion.Number
 		i.Service = s.ID
 		i.Priority = header.Priority
-		i.IgnoreIfSet = header.IgnoreIfSet
+		i.IgnoreIfSet = fastly.Compatibool(header.IgnoreIfSet)
 		i.Substitution = header.Substitution
 		i.RequestCondition = header.RequestCondition
 		i.ResponseCondition = header.ResponseCondition
