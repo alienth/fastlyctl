@@ -724,7 +724,7 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.HealthChecks, remoteHealthChecks) {
 		if err := syncHealthChecks(client, s, config.HealthChecks); err != nil {
-			return err
+			return fmt.Errorf("Error syncing health checks: %s", err)
 		}
 	}
 
@@ -734,7 +734,7 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.CacheSettings, remoteCacheSettings) {
 		if err := syncCacheSettings(client, s, config.CacheSettings); err != nil {
-			return err
+			return fmt.Errorf("Error syncing cache settings: %s", err)
 		}
 	}
 
@@ -744,7 +744,7 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.Backends, remoteBackends) {
 		if err := syncBackends(client, s, config.Backends); err != nil {
-			return err
+			return fmt.Errorf("Error syncing backends: %s", err)
 		}
 	}
 
@@ -754,7 +754,7 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.Headers, remoteHeaders) {
 		if err := syncHeaders(client, s, config.Headers); err != nil {
-			return err
+			return fmt.Errorf("Error syncing headers: %s", err)
 		}
 	}
 
@@ -764,7 +764,7 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.Syslogs, remoteSyslogs) {
 		if err := syncSyslogs(client, s, config.Syslogs); err != nil {
-			return err
+			return fmt.Errorf("Error syncing syslogs: %s", err)
 		}
 	}
 
@@ -774,7 +774,7 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.Papertrails, remotePapertrails) {
 		if err := syncPapertrails(client, s, config.Papertrails); err != nil {
-			return err
+			return fmt.Errorf("Error syncing papertrail: %s", err)
 		}
 	}
 
@@ -784,7 +784,7 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.Sumologics, remoteSumologics) {
 		if err := syncSumologics(client, s, config.Sumologics); err != nil {
-			return err
+			return fmt.Errorf("Error syncing sumologics: %s", err)
 		}
 	}
 
@@ -794,7 +794,7 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.FTPs, remoteFTPs) {
 		if err := syncFTPs(client, s, config.FTPs); err != nil {
-			return err
+			return fmt.Errorf("Error syncing ftps: %s", err)
 		}
 	}
 
@@ -814,7 +814,7 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.S3s, remoteS3s) {
 		if err := syncS3s(client, s, config.S3s); err != nil {
-			return err
+			return fmt.Errorf("Error syncing s3s: %s", err)
 		}
 	}
 
@@ -824,7 +824,7 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.Domains, remoteDomains) {
 		if err := syncDomains(client, s, config.Domains); err != nil {
-			return err
+			return fmt.Errorf("Error syncing domains: %s", err)
 		}
 	}
 
@@ -834,7 +834,7 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.Settings, remoteSettings) {
 		if err := syncSettings(client, s, config.Settings); err != nil {
-			return err
+			return fmt.Errorf("Error syncing settings: %s", err)
 		}
 	}
 
@@ -844,7 +844,7 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.Gzips, remoteGzips) {
 		if err := syncGzips(client, s, config.Gzips); err != nil {
-			return err
+			return fmt.Errorf("Error syncing gzips: %s", err)
 		}
 	}
 
@@ -865,12 +865,12 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	}
 	if !reflect.DeepEqual(config.Directors, remoteDirectors) || !mappingsInSync {
 		if err := syncDirectors(client, s, config.Directors); err != nil {
-			return err
+			return fmt.Errorf("Error syncing directors: %s", err)
 		}
 		// Syncing directors will initially delete all directors, which implicitly
 		// deletes all of the directorbackend mappings. As such, we must recreate.
 		if err := syncDirectorBackends(client, s, config.DirectorBackends); err != nil {
-			return err
+			return fmt.Errorf("Error syncing director backend mappings: %s", err)
 		}
 	}
 
