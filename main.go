@@ -72,23 +72,6 @@ func readConfig(file string) error {
 			return err
 		}
 		siteConfigs[name] = config
-		for _, backend := range config.Backends {
-			if config.SSLCertHostname != "" {
-				backend.SSLCertHostname = config.SSLCertHostname
-			}
-			backend.SSLCertHostname = strings.Replace(backend.SSLCertHostname, "_servicename_", name, -1)
-		}
-		for _, s3 := range config.S3s {
-			s3.Path = strings.Replace(s3.Path, "_servicename_", name, -1)
-		}
-		for _, domain := range config.Domains {
-			domain.Name = strings.Replace(domain.Name, "_servicename_", name, -1)
-		}
-		for _, s3 := range config.S3s {
-			s3.BucketName = strings.Replace(s3.BucketName, "_servicename_", name, -1)
-			s3.Path = strings.Replace(s3.Path, "_servicename_", name, -1)
-		}
-
 	}
 	return nil
 }
@@ -329,10 +312,11 @@ func syncDomains(client *fastly.Client, s *fastly.Service, newDomains []*fastly.
 			return err
 		}
 	}
+	r := strings.NewReplacer("_servicename_", s.Name)
 	for _, domain := range newDomains {
 		var i fastly.CreateDomainInput
 
-		i.Name = domain.Name
+		i.Name = r.Replace(domain.Name)
 		i.Service = s.ID
 		i.Comment = domain.Comment
 		i.Version = newversion.Number
@@ -529,17 +513,18 @@ func syncS3s(client *fastly.Client, s *fastly.Service, newS3s []*fastly.S3) erro
 			return err
 		}
 	}
+	r := strings.NewReplacer("_servicename_", s.Name)
 	for _, s3 := range newS3s {
 		var i fastly.CreateS3Input
 
 		i.Name = s3.Name
 		i.Service = s.ID
 		i.Version = newversion.Number
-		i.Path = s3.Path
+		i.Path = r.Replace(s3.Path)
 		i.Format = s3.Format
 		i.Period = s3.Period
 		i.TimestampFormat = s3.TimestampFormat
-		i.BucketName = s3.BucketName
+		i.BucketName = r.Replace(s3.BucketName)
 		i.AccessKey = s3.AccessKey
 		i.GzipLevel = s3.GzipLevel
 		i.SecretKey = s3.SecretKey
@@ -673,9 +658,10 @@ func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []*fastl
 			return err
 		}
 	}
+	r := strings.NewReplacer("_servicename_", s.Name, "_prefix_", siteConfigs[s.Name].IPPrefix, "_suffix_", siteConfigs[s.Name].IPSuffix)
 	for _, backend := range newBackends {
 		var i fastly.CreateBackendInput
-		i.Address = backend.Address
+		i.Address = r.Replace(backend.Address)
 		i.Port = backend.Port
 		i.Name = backend.Name
 		i.Service = newversion.ServiceID
@@ -684,6 +670,7 @@ func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []*fastl
 		i.SSLCheckCert = backend.SSLCheckCert
 		i.SSLSNIHostname = backend.SSLSNIHostname
 		i.SSLHostname = backend.SSLHostname
+		i.SSLCertHostname = r.Replace(backend.SSLCertHostname)
 		i.AutoLoadbalance = backend.AutoLoadbalance
 		i.Weight = backend.Weight
 		i.MaxConn = backend.MaxConn
