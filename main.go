@@ -883,6 +883,11 @@ func main() {
 		log.Fatalf("Error listing services: %s", err)
 	}
 	for _, s := range services {
+		// Only configure services for which configs have been specified
+		if _, ok := siteConfigs[s.Name]; !ok {
+			continue
+		}
+		fmt.Println("Syncing ", s.Name)
 		if err = syncVcls(client, s); err != nil {
 			log.Fatalf("Error syncing VCLs: %s", err)
 		}
