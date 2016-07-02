@@ -44,6 +44,9 @@ type SiteConfig struct {
 	// an SSL hostname, such as when Fastly has a cert which we do not
 	// have on the origin.
 	SSLCertHostname string
+
+	IPPrefix string
+	IPSuffix string
 }
 
 func readConfig(file string) error {
