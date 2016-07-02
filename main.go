@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -709,14 +708,12 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(config.Conditions, remoteConditions) {
-		if !(len(config.Conditions) == 0 && len(remoteConditions) == 0) {
-			if debug {
-				fmt.Printf("Syncing %s for %s\n", "conditions", s.Name)
-			}
-			if err := syncConditions(client, s, config.Conditions); err != nil {
-				return fmt.Errorf("Error syncing conditions: %s", err)
-			}
+	if !(len(config.Conditions) == 0 && len(remoteConditions) == 0) {
+		if debug {
+			fmt.Printf("Syncing %s for %s\n", "conditions", s.Name)
+		}
+		if err := syncConditions(client, s, config.Conditions); err != nil {
+			return fmt.Errorf("Error syncing conditions: %s", err)
 		}
 	}
 
@@ -724,14 +721,12 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(config.HealthChecks, remoteHealthChecks) {
-		if !(len(config.HealthChecks) == 0 && len(remoteHealthChecks) == 0) {
-			if debug {
-				fmt.Printf("Syncing %s for %s\n", "health checks", s.Name)
-			}
-			if err := syncHealthChecks(client, s, config.HealthChecks); err != nil {
-				return fmt.Errorf("Error syncing health checks: %s", err)
-			}
+	if !(len(config.HealthChecks) == 0 && len(remoteHealthChecks) == 0) {
+		if debug {
+			fmt.Printf("Syncing %s for %s\n", "health checks", s.Name)
+		}
+		if err := syncHealthChecks(client, s, config.HealthChecks); err != nil {
+			return fmt.Errorf("Error syncing health checks: %s", err)
 		}
 	}
 
@@ -739,14 +734,12 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(config.CacheSettings, remoteCacheSettings) {
-		if !(len(config.CacheSettings) == 0 && len(remoteCacheSettings) == 0) {
-			if debug {
-				fmt.Printf("Syncing %s for %s\n", "cache settings", s.Name)
-			}
-			if err := syncCacheSettings(client, s, config.CacheSettings); err != nil {
-				return fmt.Errorf("Error syncing cache settings: %s", err)
-			}
+	if !(len(config.CacheSettings) == 0 && len(remoteCacheSettings) == 0) {
+		if debug {
+			fmt.Printf("Syncing %s for %s\n", "cache settings", s.Name)
+		}
+		if err := syncCacheSettings(client, s, config.CacheSettings); err != nil {
+			return fmt.Errorf("Error syncing cache settings: %s", err)
 		}
 	}
 
@@ -754,14 +747,12 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(config.Backends, remoteBackends) {
-		if !(len(config.Backends) == 0 && len(remoteBackends) == 0) {
-			if debug {
-				fmt.Printf("Syncing %s for %s\n", "backends", s.Name)
-			}
-			if err := syncBackends(client, s, config.Backends); err != nil {
-				return fmt.Errorf("Error syncing backends: %s", err)
-			}
+	if !(len(config.Backends) == 0 && len(remoteBackends) == 0) {
+		if debug {
+			fmt.Printf("Syncing %s for %s\n", "backends", s.Name)
+		}
+		if err := syncBackends(client, s, config.Backends); err != nil {
+			return fmt.Errorf("Error syncing backends: %s", err)
 		}
 	}
 
@@ -769,14 +760,12 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(config.Headers, remoteHeaders) {
-		if !(len(config.Headers) == 0 && len(remoteHeaders) == 0) {
-			if debug {
-				fmt.Printf("Syncing %s for %s\n", "headers", s.Name)
-			}
-			if err := syncHeaders(client, s, config.Headers); err != nil {
-				return fmt.Errorf("Error syncing headers: %s", err)
-			}
+	if !(len(config.Headers) == 0 && len(remoteHeaders) == 0) {
+		if debug {
+			fmt.Printf("Syncing %s for %s\n", "headers", s.Name)
+		}
+		if err := syncHeaders(client, s, config.Headers); err != nil {
+			return fmt.Errorf("Error syncing headers: %s", err)
 		}
 	}
 
@@ -784,14 +773,12 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(config.Syslogs, remoteSyslogs) {
-		if !(len(config.Syslogs) == 0 && len(remoteSyslogs) == 0) {
-			if debug {
-				fmt.Printf("Syncing %s for %s\n", "syslogs", s.Name)
-			}
-			if err := syncSyslogs(client, s, config.Syslogs); err != nil {
-				return fmt.Errorf("Error syncing syslogs: %s", err)
-			}
+	if !(len(config.Syslogs) == 0 && len(remoteSyslogs) == 0) {
+		if debug {
+			fmt.Printf("Syncing %s for %s\n", "syslogs", s.Name)
+		}
+		if err := syncSyslogs(client, s, config.Syslogs); err != nil {
+			return fmt.Errorf("Error syncing syslogs: %s", err)
 		}
 	}
 
@@ -799,14 +786,12 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(config.Papertrails, remotePapertrails) {
-		if !(len(config.Papertrails) == 0 && len(remotePapertrails) == 0) {
-			if debug {
-				fmt.Printf("Syncing %s for %s\n", "papertrails", s.Name)
-			}
-			if err := syncPapertrails(client, s, config.Papertrails); err != nil {
-				return fmt.Errorf("Error syncing papertrail: %s", err)
-			}
+	if !(len(config.Papertrails) == 0 && len(remotePapertrails) == 0) {
+		if debug {
+			fmt.Printf("Syncing %s for %s\n", "papertrails", s.Name)
+		}
+		if err := syncPapertrails(client, s, config.Papertrails); err != nil {
+			return fmt.Errorf("Error syncing papertrail: %s", err)
 		}
 	}
 
@@ -814,14 +799,12 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(config.Sumologics, remoteSumologics) {
-		if !(len(config.Sumologics) == 0 && len(remoteSumologics) == 0) {
-			if debug {
-				fmt.Printf("Syncing %s for %s\n", "sumologics", s.Name)
-			}
-			if err := syncSumologics(client, s, config.Sumologics); err != nil {
-				return fmt.Errorf("Error syncing sumologics: %s", err)
-			}
+	if !(len(config.Sumologics) == 0 && len(remoteSumologics) == 0) {
+		if debug {
+			fmt.Printf("Syncing %s for %s\n", "sumologics", s.Name)
+		}
+		if err := syncSumologics(client, s, config.Sumologics); err != nil {
+			return fmt.Errorf("Error syncing sumologics: %s", err)
 		}
 	}
 
@@ -829,14 +812,12 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(config.FTPs, remoteFTPs) {
-		if !(len(config.FTPs) == 0 && len(remoteFTPs) == 0) {
-			if debug {
-				fmt.Printf("Syncing %s for %s\n", "ftps", s.Name)
-			}
-			if err := syncFTPs(client, s, config.FTPs); err != nil {
-				return fmt.Errorf("Error syncing ftps: %s", err)
-			}
+	if !(len(config.FTPs) == 0 && len(remoteFTPs) == 0) {
+		if debug {
+			fmt.Printf("Syncing %s for %s\n", "ftps", s.Name)
+		}
+		if err := syncFTPs(client, s, config.FTPs); err != nil {
+			return fmt.Errorf("Error syncing ftps: %s", err)
 		}
 	}
 
@@ -844,14 +825,12 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(config.GCSs, remoteGCSs) {
-		if !(len(config.GCSs) == 0 && len(remoteGCSs) == 0) {
-			if debug {
-				fmt.Printf("Syncing %s for %s\n", "gcss", s.Name)
-			}
-			if err := syncGCSs(client, s, config.GCSs); err != nil {
-				return err
-			}
+	if !(len(config.GCSs) == 0 && len(remoteGCSs) == 0) {
+		if debug {
+			fmt.Printf("Syncing %s for %s\n", "gcss", s.Name)
+		}
+		if err := syncGCSs(client, s, config.GCSs); err != nil {
+			return err
 		}
 	}
 
@@ -859,14 +838,12 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(config.S3s, remoteS3s) {
-		if !(len(config.S3s) == 0 && len(remoteS3s) == 0) {
-			if debug {
-				fmt.Printf("Syncing %s for %s\n", "s3s", s.Name)
-			}
-			if err := syncS3s(client, s, config.S3s); err != nil {
-				return fmt.Errorf("Error syncing s3s: %s", err)
-			}
+	if !(len(config.S3s) == 0 && len(remoteS3s) == 0) {
+		if debug {
+			fmt.Printf("Syncing %s for %s\n", "s3s", s.Name)
+		}
+		if err := syncS3s(client, s, config.S3s); err != nil {
+			return fmt.Errorf("Error syncing s3s: %s", err)
 		}
 	}
 
@@ -874,14 +851,12 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(config.Domains, remoteDomains) {
-		if !(len(config.Domains) == 0 && len(remoteDomains) == 0) {
-			if debug {
-				fmt.Printf("Syncing %s for %s\n", "domains", s.Name)
-			}
-			if err := syncDomains(client, s, config.Domains); err != nil {
-				return fmt.Errorf("Error syncing domains: %s", err)
-			}
+	if !(len(config.Domains) == 0 && len(remoteDomains) == 0) {
+		if debug {
+			fmt.Printf("Syncing %s for %s\n", "domains", s.Name)
+		}
+		if err := syncDomains(client, s, config.Domains); err != nil {
+			return fmt.Errorf("Error syncing domains: %s", err)
 		}
 	}
 
@@ -889,14 +864,12 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(config.Settings, remoteSettings) {
-		if *config.Settings != *remoteSettings {
-			if debug {
-				fmt.Printf("Syncing %s for %s\n", "settings", s.Name)
-			}
-			if err := syncSettings(client, s, config.Settings); err != nil {
-				return fmt.Errorf("Error syncing settings: %s", err)
-			}
+	if *config.Settings != *remoteSettings {
+		if debug {
+			fmt.Printf("Syncing %s for %s\n", "settings", s.Name)
+		}
+		if err := syncSettings(client, s, config.Settings); err != nil {
+			return fmt.Errorf("Error syncing settings: %s", err)
 		}
 	}
 
@@ -904,14 +877,12 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(config.Gzips, remoteGzips) {
-		if !(len(config.Gzips) == 0 && len(remoteGzips) == 0) {
-			if debug {
-				fmt.Printf("Syncing %s for %s\n", "gzips", s.Name)
-			}
-			if err := syncGzips(client, s, config.Gzips); err != nil {
-				return fmt.Errorf("Error syncing gzips: %s", err)
-			}
+	if !(len(config.Gzips) == 0 && len(remoteGzips) == 0) {
+		if debug {
+			fmt.Printf("Syncing %s for %s\n", "gzips", s.Name)
+		}
+		if err := syncGzips(client, s, config.Gzips); err != nil {
+			return fmt.Errorf("Error syncing gzips: %s", err)
 		}
 	}
 
@@ -930,19 +901,17 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 			return err
 		}
 	}
-	if !reflect.DeepEqual(config.Directors, remoteDirectors) || !mappingsInSync {
-		if !(len(config.Directors) == 0 && len(remoteDirectors) == 0) {
-			if debug {
-				fmt.Printf("Syncing %s for %s\n", "directors", s.Name)
-			}
-			if err := syncDirectors(client, s, config.Directors); err != nil {
-				return fmt.Errorf("Error syncing directors: %s", err)
-			}
-			// Syncing directors will initially delete all directors, which implicitly
-			// deletes all of the directorbackend mappings. As such, we must recreate.
-			if err := syncDirectorBackends(client, s, config.DirectorBackends); err != nil {
-				return fmt.Errorf("Error syncing director backend mappings: %s", err)
-			}
+	if !(len(config.Directors) == 0 && len(remoteDirectors) == 0) || !mappingsInSync {
+		if debug {
+			fmt.Printf("Syncing %s for %s\n", "directors", s.Name)
+		}
+		if err := syncDirectors(client, s, config.Directors); err != nil {
+			return fmt.Errorf("Error syncing directors: %s", err)
+		}
+		// Syncing directors will initially delete all directors, which implicitly
+		// deletes all of the directorbackend mappings. As such, we must recreate.
+		if err := syncDirectorBackends(client, s, config.DirectorBackends); err != nil {
+			return fmt.Errorf("Error syncing director backend mappings: %s", err)
 		}
 	}
 
