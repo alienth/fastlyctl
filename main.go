@@ -640,7 +640,7 @@ func syncConditions(client *fastly.Client, s *fastly.Service, newConditions []*f
 	}
 	for _, condition := range newConditions {
 		var i fastly.CreateConditionInput
-		i.Name = r.Replace(condition.Name)
+		i.Name = condition.Name
 		i.Type = condition.Type
 		i.Service = s.ID
 		i.Version = newversion.Number
