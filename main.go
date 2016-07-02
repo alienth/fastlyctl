@@ -673,6 +673,7 @@ func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []*fastl
 	for _, backend := range newBackends {
 		var i fastly.CreateBackendInput
 		i.Address = backend.Address
+		i.Port = backend.Port
 		i.Name = backend.Name
 		i.Service = newversion.ServiceID
 		i.Version = newversion.Number
