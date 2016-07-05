@@ -22,22 +22,22 @@ var siteConfigs map[string]SiteConfig
 var debug bool
 
 type SiteConfig struct {
-	Settings         *fastly.Settings
-	Domains          []*fastly.Domain
-	Backends         []*fastly.Backend
-	Conditions       []*fastly.Condition
-	CacheSettings    []*fastly.CacheSetting
-	Headers          []*fastly.Header
-	S3s              []*fastly.S3
-	FTPs             []*fastly.FTP
-	GCSs             []*fastly.GCS
-	Papertrails      []*fastly.Papertrail
-	Sumologics       []*fastly.Sumologic
-	Syslogs          []*fastly.Syslog
-	Gzips            []*fastly.Gzip
-	Directors        []*fastly.Director
-	DirectorBackends []*fastly.DirectorBackend
-	HealthChecks     []*fastly.HealthCheck
+	Settings         fastly.UpdateSettingsInput
+	Domains          []fastly.CreateDomainInput
+	Backends         []fastly.CreateBackendInput
+	Conditions       []fastly.CreateConditionInput
+	CacheSettings    []fastly.CreateCacheSettingInput
+	Headers          []fastly.CreateHeaderInput
+	S3s              []fastly.CreateS3Input
+	FTPs             []fastly.CreateFTPInput
+	GCSs             []fastly.CreateGCSInput
+	Papertrails      []fastly.CreatePapertrailInput
+	Sumologics       []fastly.CreateSumologicInput
+	Syslogs          []fastly.CreateSyslogInput
+	Gzips            []fastly.CreateGzipInput
+	Directors        []fastly.CreateDirectorInput
+	DirectorBackends []fastly.CreateDirectorBackendInput
+	HealthChecks     []fastly.CreateHealthCheckInput
 
 	// Override for backend SSLCertHostnames
 	// Used in cases where _servicename_ is not sufficient for defining
@@ -158,7 +158,7 @@ func syncVcls(client *fastly.Client, s *fastly.Service) error {
 	return nil
 }
 
-func syncHealthChecks(client *fastly.Client, s *fastly.Service, newHealthChecks []*fastly.HealthCheck) error {
+func syncHealthChecks(client *fastly.Client, s *fastly.Service, newHealthChecks []fastly.CreateHealthCheckInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
@@ -172,23 +172,9 @@ func syncHealthChecks(client *fastly.Client, s *fastly.Service, newHealthChecks 
 		}
 	}
 	for _, healthCheck := range newHealthChecks {
-		var i fastly.CreateHealthCheckInput
-
-		i.Name = healthCheck.Name
-		i.Version = newversion.Number
-		i.Service = s.ID
-		i.Host = healthCheck.Host
-		i.Path = healthCheck.Host
-		i.ExpectedResponse = healthCheck.ExpectedResponse
-		i.CheckInterval = healthCheck.CheckInterval
-		i.HTTPVersion = healthCheck.HTTPVersion
-		i.Threshold = healthCheck.Threshold
-		i.Initial = healthCheck.Initial
-		i.Timeout = healthCheck.Timeout
-		i.Window = healthCheck.Window
-		i.Method = healthCheck.Method
-
-		if _, err = client.CreateHealthCheck(&i); err != nil {
+		healthCheck.Version = newversion.Number
+		healthCheck.Service = s.ID
+		if _, err = client.CreateHealthCheck(&healthCheck); err != nil {
 			return err
 		}
 
@@ -196,21 +182,16 @@ func syncHealthChecks(client *fastly.Client, s *fastly.Service, newHealthChecks 
 	return nil
 }
 
-func syncDirectorBackends(client *fastly.Client, s *fastly.Service, newMappings []*fastly.DirectorBackend) error {
+func syncDirectorBackends(client *fastly.Client, s *fastly.Service, newMappings []fastly.CreateDirectorBackendInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
 	}
 
 	for _, mapping := range newMappings {
-		var i fastly.CreateDirectorBackendInput
-
-		i.Service = s.ID
-		i.Version = newversion.Number
-		i.Backend = mapping.Backend
-		i.Director = mapping.Director
-
-		if _, err = client.CreateDirectorBackend(&i); err != nil {
+		mapping.Service = s.ID
+		mapping.Version = newversion.Number
+		if _, err = client.CreateDirectorBackend(&mapping); err != nil {
 			return err
 		}
 
@@ -218,7 +199,7 @@ func syncDirectorBackends(client *fastly.Client, s *fastly.Service, newMappings 
 	return nil
 }
 
-func syncDirectors(client *fastly.Client, s *fastly.Service, newDirectors []*fastly.Director) error {
+func syncDirectors(client *fastly.Client, s *fastly.Service, newDirectors []fastly.CreateDirectorInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
@@ -232,17 +213,9 @@ func syncDirectors(client *fastly.Client, s *fastly.Service, newDirectors []*fas
 		}
 	}
 	for _, director := range newDirectors {
-		var i fastly.CreateDirectorInput
-
-		i.Name = director.Name
-		i.Version = newversion.Number
-		i.Service = s.ID
-		i.Type = director.Type
-		i.Comment = director.Comment
-		i.Quorum = director.Quorum
-		i.Retries = director.Retries
-
-		if _, err = client.CreateDirector(&i); err != nil {
+		director.Version = newversion.Number
+		director.Service = s.ID
+		if _, err = client.CreateDirector(&director); err != nil {
 			return err
 		}
 
@@ -250,7 +223,7 @@ func syncDirectors(client *fastly.Client, s *fastly.Service, newDirectors []*fas
 	return nil
 }
 
-func syncGzips(client *fastly.Client, s *fastly.Service, newGzips []*fastly.Gzip) error {
+func syncGzips(client *fastly.Client, s *fastly.Service, newGzips []fastly.CreateGzipInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
@@ -264,42 +237,30 @@ func syncGzips(client *fastly.Client, s *fastly.Service, newGzips []*fastly.Gzip
 		}
 	}
 	for _, gzip := range newGzips {
-		var i fastly.CreateGzipInput
-
-		i.Name = gzip.Name
-		i.Version = newversion.Number
-		i.Service = s.ID
-		i.Extensions = gzip.Extensions
-		i.ContentTypes = gzip.ContentTypes
-		i.CacheCondition = gzip.CacheCondition
-
-		if _, err = client.CreateGzip(&i); err != nil {
+		gzip.Version = newversion.Number
+		gzip.Service = s.ID
+		if _, err = client.CreateGzip(&gzip); err != nil {
 			return err
 		}
-
 	}
 	return nil
 }
 
-func syncSettings(client *fastly.Client, s *fastly.Service, newSettings *fastly.Settings) error {
+func syncSettings(client *fastly.Client, s *fastly.Service, newSettings fastly.UpdateSettingsInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
 	}
-
-	var i fastly.UpdateSettingsInput
-	i.Service = s.ID
-	i.Version = newversion.Number
-	i.DefaultTTL = newSettings.DefaultTTL
-	i.DefaultHost = newSettings.DefaultHost
-	if _, err = client.UpdateSettings(&i); err != nil {
+	newSettings.Service = s.ID
+	newSettings.Version = newversion.Number
+	if _, err = client.UpdateSettings(&newSettings); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func syncDomains(client *fastly.Client, s *fastly.Service, newDomains []*fastly.Domain) error {
+func syncDomains(client *fastly.Client, s *fastly.Service, newDomains []fastly.CreateDomainInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
@@ -314,22 +275,17 @@ func syncDomains(client *fastly.Client, s *fastly.Service, newDomains []*fastly.
 	}
 	r := strings.NewReplacer("_servicename_", s.Name)
 	for _, domain := range newDomains {
-		var i fastly.CreateDomainInput
-
-		i.Name = r.Replace(domain.Name)
-		i.Service = s.ID
-		i.Comment = domain.Comment
-		i.Version = newversion.Number
-
-		if _, err = client.CreateDomain(&i); err != nil {
+		domain.Name = r.Replace(domain.Name)
+		domain.Service = s.ID
+		domain.Version = newversion.Number
+		if _, err = client.CreateDomain(&domain); err != nil {
 			return err
 		}
-
 	}
 	return nil
 }
 
-func syncSyslogs(client *fastly.Client, s *fastly.Service, newSyslogs []*fastly.Syslog) error {
+func syncSyslogs(client *fastly.Client, s *fastly.Service, newSyslogs []fastly.CreateSyslogInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
@@ -343,28 +299,16 @@ func syncSyslogs(client *fastly.Client, s *fastly.Service, newSyslogs []*fastly.
 		}
 	}
 	for _, syslog := range newSyslogs {
-		var i fastly.CreateSyslogInput
-
-		i.Name = syslog.Name
-		i.Service = s.ID
-		i.Version = newversion.Number
-		i.Address = syslog.Address
-		i.Port = syslog.Port
-		i.UseTLS = fastly.Compatibool(syslog.UseTLS)
-		i.TLSCACert = syslog.TLSCACert
-		i.Token = syslog.Token
-		i.Format = syslog.Format
-		i.ResponseCondition = syslog.ResponseCondition
-
-		if _, err = client.CreateSyslog(&i); err != nil {
+		syslog.Service = s.ID
+		syslog.Version = newversion.Number
+		if _, err = client.CreateSyslog(&syslog); err != nil {
 			return err
 		}
-
 	}
 	return nil
 }
 
-func syncPapertrails(client *fastly.Client, s *fastly.Service, newPapertrails []*fastly.Papertrail) error {
+func syncPapertrails(client *fastly.Client, s *fastly.Service, newPapertrails []fastly.CreatePapertrailInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
@@ -378,25 +322,16 @@ func syncPapertrails(client *fastly.Client, s *fastly.Service, newPapertrails []
 		}
 	}
 	for _, papertrail := range newPapertrails {
-		var i fastly.CreatePapertrailInput
-
-		i.Name = papertrail.Name
-		i.Service = s.ID
-		i.Version = newversion.Number
-		i.Address = papertrail.Address
-		i.Port = papertrail.Port
-		i.Format = papertrail.Format
-		i.ResponseCondition = papertrail.ResponseCondition
-
-		if _, err = client.CreatePapertrail(&i); err != nil {
+		papertrail.Name = papertrail.Name
+		papertrail.Service = s.ID
+		if _, err = client.CreatePapertrail(&papertrail); err != nil {
 			return err
 		}
-
 	}
 	return nil
 }
 
-func syncSumologics(client *fastly.Client, s *fastly.Service, newSumologics []*fastly.Sumologic) error {
+func syncSumologics(client *fastly.Client, s *fastly.Service, newSumologics []fastly.CreateSumologicInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
@@ -410,17 +345,9 @@ func syncSumologics(client *fastly.Client, s *fastly.Service, newSumologics []*f
 		}
 	}
 	for _, sumologic := range newSumologics {
-		var i fastly.CreateSumologicInput
-
-		i.Name = sumologic.Name
-		i.Service = s.ID
-		i.Version = newversion.Number
-		i.Address = sumologic.Address
-		i.Format = sumologic.Format
-		i.URL = sumologic.URL
-		i.ResponseCondition = sumologic.ResponseCondition
-
-		if _, err = client.CreateSumologic(&i); err != nil {
+		sumologic.Service = s.ID
+		sumologic.Version = newversion.Number
+		if _, err = client.CreateSumologic(&sumologic); err != nil {
 			return err
 		}
 
@@ -428,7 +355,7 @@ func syncSumologics(client *fastly.Client, s *fastly.Service, newSumologics []*f
 	return nil
 }
 
-func syncFTPs(client *fastly.Client, s *fastly.Service, newFTPs []*fastly.FTP) error {
+func syncFTPs(client *fastly.Client, s *fastly.Service, newFTPs []fastly.CreateFTPInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
@@ -442,29 +369,16 @@ func syncFTPs(client *fastly.Client, s *fastly.Service, newFTPs []*fastly.FTP) e
 		}
 	}
 	for _, ftp := range newFTPs {
-		var i fastly.CreateFTPInput
-
-		i.Name = ftp.Name
-		i.Service = s.ID
-		i.Version = newversion.Number
-		i.Path = ftp.Path
-		i.Format = ftp.Format
-		i.Period = ftp.Period
-		i.TimestampFormat = ftp.TimestampFormat
-		i.Username = ftp.Username
-		i.Password = ftp.Password
-		i.Address = ftp.Address
-		i.GzipLevel = ftp.GzipLevel
-		i.ResponseCondition = ftp.ResponseCondition
-
-		if _, err = client.CreateFTP(&i); err != nil {
+		ftp.Service = s.ID
+		ftp.Version = newversion.Number
+		if _, err = client.CreateFTP(&ftp); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func syncGCSs(client *fastly.Client, s *fastly.Service, newGCSs []*fastly.GCS) error {
+func syncGCSs(client *fastly.Client, s *fastly.Service, newGCSs []fastly.CreateGCSInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
@@ -478,29 +392,16 @@ func syncGCSs(client *fastly.Client, s *fastly.Service, newGCSs []*fastly.GCS) e
 		}
 	}
 	for _, gcs := range newGCSs {
-		var i fastly.CreateGCSInput
-
-		i.Name = gcs.Name
-		i.Service = s.ID
-		i.Version = newversion.Number
-		i.Path = gcs.Path
-		i.Format = gcs.Format
-		i.Period = gcs.Period
-		i.TimestampFormat = gcs.TimestampFormat
-		i.Bucket = gcs.Bucket
-		i.GzipLevel = gcs.GzipLevel
-		i.SecretKey = gcs.SecretKey
-		i.ResponseCondition = gcs.ResponseCondition
-
-		if _, err = client.CreateGCS(&i); err != nil {
+		gcs.Service = s.ID
+		gcs.Version = newversion.Number
+		if _, err = client.CreateGCS(&gcs); err != nil {
 			return err
 		}
-
 	}
 	return nil
 }
 
-func syncS3s(client *fastly.Client, s *fastly.Service, newS3s []*fastly.S3) error {
+func syncS3s(client *fastly.Client, s *fastly.Service, newS3s []fastly.CreateS3Input) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
@@ -515,32 +416,18 @@ func syncS3s(client *fastly.Client, s *fastly.Service, newS3s []*fastly.S3) erro
 	}
 	r := strings.NewReplacer("_servicename_", s.Name)
 	for _, s3 := range newS3s {
-		var i fastly.CreateS3Input
-
-		i.Name = s3.Name
-		i.Service = s.ID
-		i.Version = newversion.Number
-		i.Path = r.Replace(s3.Path)
-		i.Format = s3.Format
-		i.Period = s3.Period
-		i.TimestampFormat = s3.TimestampFormat
-		i.BucketName = r.Replace(s3.BucketName)
-		i.AccessKey = s3.AccessKey
-		i.GzipLevel = s3.GzipLevel
-		i.SecretKey = s3.SecretKey
-		i.Domain = s3.Domain
-		i.ResponseCondition = s3.ResponseCondition
-		i.Redundancy = s3.Redundancy
-
-		if _, err = client.CreateS3(&i); err != nil {
+		s3.Service = s.ID
+		s3.Version = newversion.Number
+		s3.Path = r.Replace(s3.Path)
+		s3.BucketName = r.Replace(s3.BucketName)
+		if _, err = client.CreateS3(&s3); err != nil {
 			return err
 		}
-
 	}
 	return nil
 }
 
-func syncHeaders(client *fastly.Client, s *fastly.Service, newHeaders []*fastly.Header) error {
+func syncHeaders(client *fastly.Client, s *fastly.Service, newHeaders []fastly.CreateHeaderInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
@@ -554,26 +441,12 @@ func syncHeaders(client *fastly.Client, s *fastly.Service, newHeaders []*fastly.
 		}
 	}
 	for _, header := range newHeaders {
-		if *header == (fastly.Header{}) {
+		if header == (fastly.CreateHeaderInput{}) {
 			continue
 		}
-		var i fastly.CreateHeaderInput
-		i.Name = header.Name
-		i.Type = header.Type
-		i.Regex = header.Regex
-		i.Destination = header.Destination
-		i.Source = header.Source
-		i.Action = header.Action
-		i.Version = newversion.Number
-		i.Service = s.ID
-		i.Priority = header.Priority
-		i.IgnoreIfSet = fastly.Compatibool(header.IgnoreIfSet)
-		i.Substitution = header.Substitution
-		i.RequestCondition = header.RequestCondition
-		i.ResponseCondition = header.ResponseCondition
-		i.CacheCondition = header.CacheCondition
-
-		if _, err = client.CreateHeader(&i); err != nil {
+		header.Version = newversion.Number
+		header.Service = s.ID
+		if _, err = client.CreateHeader(&header); err != nil {
 			return err
 		}
 
@@ -581,7 +454,7 @@ func syncHeaders(client *fastly.Client, s *fastly.Service, newHeaders []*fastly.
 	return nil
 }
 
-func syncCacheSettings(client *fastly.Client, s *fastly.Service, newCacheSettings []*fastly.CacheSetting) error {
+func syncCacheSettings(client *fastly.Client, s *fastly.Service, newCacheSettings []fastly.CreateCacheSettingInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
@@ -595,19 +468,12 @@ func syncCacheSettings(client *fastly.Client, s *fastly.Service, newCacheSetting
 		}
 	}
 	for _, setting := range newCacheSettings {
-		if *setting == (fastly.CacheSetting{}) {
+		if setting == (fastly.CreateCacheSettingInput{}) {
 			continue
 		}
-		var i fastly.CreateCacheSettingInput
-		i.TTL = setting.TTL
-		i.Name = setting.Name
-		i.Action = setting.Action
-		i.Service = s.ID
-		i.Version = newversion.Number
-		i.StaleTTL = setting.StaleTTL
-		i.CacheCondition = setting.CacheCondition
-
-		if _, err = client.CreateCacheSetting(&i); err != nil {
+		setting.Service = s.ID
+		setting.Version = newversion.Number
+		if _, err = client.CreateCacheSetting(&setting); err != nil {
 			return err
 		}
 
@@ -615,7 +481,7 @@ func syncCacheSettings(client *fastly.Client, s *fastly.Service, newCacheSetting
 	return nil
 }
 
-func syncConditions(client *fastly.Client, s *fastly.Service, newConditions []*fastly.Condition) error {
+func syncConditions(client *fastly.Client, s *fastly.Service, newConditions []fastly.CreateConditionInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
@@ -633,14 +499,9 @@ func syncConditions(client *fastly.Client, s *fastly.Service, newConditions []*f
 		}
 	}
 	for _, condition := range newConditions {
-		var i fastly.CreateConditionInput
-		i.Name = condition.Name
-		i.Type = condition.Type
-		i.Service = s.ID
-		i.Version = newversion.Number
-		i.Priority = condition.Priority
-		i.Statement = condition.Statement
-		if _, err = client.CreateCondition(&i); err != nil {
+		condition.Service = s.ID
+		condition.Version = newversion.Number
+		if _, err = client.CreateCondition(&condition); err != nil {
 			return err
 		}
 
@@ -648,7 +509,7 @@ func syncConditions(client *fastly.Client, s *fastly.Service, newConditions []*f
 	return nil
 }
 
-func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []*fastly.Backend) error {
+func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []fastly.CreateBackendInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
@@ -666,26 +527,11 @@ func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []*fastl
 	}
 	r := strings.NewReplacer("_servicename_", s.Name, "_prefix_", siteConfigs[s.Name].IPPrefix, "_suffix_", siteConfigs[s.Name].IPSuffix)
 	for _, backend := range newBackends {
-		var i fastly.CreateBackendInput
-		i.Address = r.Replace(backend.Address)
-		i.Port = backend.Port
-		i.Name = backend.Name
-		i.Service = newversion.ServiceID
-		i.Version = newversion.Number
-		i.UseSSL = backend.UseSSL
-		i.SSLCheckCert = backend.SSLCheckCert
-		i.SSLSNIHostname = backend.SSLSNIHostname
-		i.SSLHostname = backend.SSLHostname
-		i.SSLCertHostname = r.Replace(backend.SSLCertHostname)
-		i.AutoLoadbalance = backend.AutoLoadbalance
-		i.Weight = backend.Weight
-		i.MaxConn = backend.MaxConn
-		i.ConnectTimeout = backend.ConnectTimeout
-		i.FirstByteTimeout = backend.FirstByteTimeout
-		i.BetweenBytesTimeout = backend.BetweenBytesTimeout
-		i.HealthCheck = backend.HealthCheck
-		i.RequestCondition = backend.RequestCondition
-		if _, err = client.CreateBackend(&i); err != nil {
+		backend.Address = r.Replace(backend.Address)
+		backend.Service = newversion.ServiceID
+		backend.Version = newversion.Number
+		backend.SSLCertHostname = r.Replace(backend.SSLCertHostname)
+		if _, err = client.CreateBackend(&backend); err != nil {
 			return err
 		}
 	}
@@ -860,17 +706,11 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 
-	remoteSettings, _ := client.GetSettings(&fastly.GetSettingsInput{Service: s.ID, Version: activeVersion})
-	if err != nil {
-		return err
+	if debug {
+		fmt.Printf("Syncing %s for %s\n", "settings", s.Name)
 	}
-	if *config.Settings != *remoteSettings {
-		if debug {
-			fmt.Printf("Syncing %s for %s\n", "settings", s.Name)
-		}
-		if err := syncSettings(client, s, config.Settings); err != nil {
-			return fmt.Errorf("Error syncing settings: %s", err)
-		}
+	if err := syncSettings(client, s, config.Settings); err != nil {
+		return fmt.Errorf("Error syncing settings: %s", err)
 	}
 
 	remoteGzips, _ := client.ListGzips(&fastly.ListGzipsInput{Service: s.ID, Version: activeVersion})
