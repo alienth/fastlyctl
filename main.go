@@ -50,7 +50,10 @@ type SiteConfig struct {
 }
 
 func readConfig(file string) error {
-	body, _ := ioutil.ReadFile(file)
+	body, err := ioutil.ReadFile(file)
+	if err != nil {
+		return err
+	}
 	if strings.HasSuffix(file, ".toml") {
 		if err := toml.Unmarshal(body, &siteConfigs); err != nil {
 			return fmt.Errorf("toml parsing error: %s\n", err)
