@@ -827,6 +827,7 @@ func main() {
 				if err != nil {
 					return cli.NewExitError(fmt.Sprintf("Error listing services: %s", err), -1)
 				}
+				foundService := false
 				for _, s := range services {
 					// Only configure services for which configs have been specified
 					if _, ok := siteConfigs[s.Name]; !ok {
@@ -835,6 +836,7 @@ func main() {
 					if !c.Bool("all") && !stringInSlice(s.Name, c.Args()) {
 						continue
 					}
+					foundService = true
 					fmt.Println("Syncing ", s.Name)
 					if err = syncVcls(client, s); err != nil {
 						return cli.NewExitError(fmt.Sprintf("Error syncing VCLs: %s", err), -1)
@@ -842,6 +844,9 @@ func main() {
 					if err = syncConfig(client, s); err != nil {
 						return cli.NewExitError(fmt.Sprintf("Error syncing service config for %s: %s", s.Name, err), -1)
 					}
+				}
+				if !foundService {
+					return cli.NewExitError(fmt.Sprintf("No matching services could be found to be sync'd."), -1)
 				}
 				return nil
 			},
