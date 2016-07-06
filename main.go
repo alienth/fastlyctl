@@ -835,9 +835,11 @@ func main() {
 			Usage:  "Fastly API Key.",
 			EnvVar: "FASTLY_KEY",
 		},
+		cli.StringFlag{
+			Name:  "debug, d",
+			Usage: "Print more detailed info for debugging.",
+		},
 	}
-
-	debug = true
 
 	app.Commands = []cli.Command{
 		cli.Command{
@@ -849,6 +851,10 @@ func main() {
 					Name:  "all, a",
 					Usage: "Sync all services listed in config file",
 				},
+			},
+			Before: func(c *cli.Context) error {
+				debug = c.Bool("debug")
+				return nil
 			},
 			Action: syncConfig,
 		},
