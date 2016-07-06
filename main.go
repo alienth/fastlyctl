@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/alienth/go-fastly"
 	"github.com/imdario/mergo"
+	"github.com/urfave/cli"
 )
 
 var pendingVersions map[string]fastly.Version
@@ -762,32 +762,61 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 }
 
 func main() {
-	client, err := fastly.NewClient(os.Getenv("FASTLY_KEY"))
-	if err != nil {
-		log.Fatal(err)
+	app := cli.NewApp()
+	app.Name = "fastlyctl"
+
+	var configFile, fastlyKey string
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:        "config, c",
+			Value:       "config.toml",
+			Usage:       "Load Fastly configuration from `FILE`",
+			Destination: &configFile,
+		},
+		cli.StringFlag{
+			Name:        "K",
+			Usage:       "Fastly API Key.",
+			Destination: &fastlyKey,
+			EnvVar:      "FASTLY_KEY",
+		},
 	}
 
 	debug = true
-	if err := readConfig("config.toml"); err != nil {
-		log.Fatalf("Error reading config file: %s", err)
-	}
-	pendingVersions = make(map[string]fastly.Version)
+	app.Action = func(c *cli.Context) error {
+		if fastlyKey == "" {
+			cli.ShowAppHelp(c)
+			return cli.NewExitError("Error: Fastly API key must be set.", -1)
+		}
 
-	services, err := client.ListServices(&fastly.ListServicesInput{})
-	if err != nil {
-		log.Fatalf("Error listing services: %s", err)
+		client, err := fastly.NewClient(fastlyKey)
+		if err != nil {
+			return cli.NewExitError(fmt.Sprintf("Error initializing fastly client: %s", err), -1)
+		}
+
+		if err := readConfig(configFile); err != nil {
+			return cli.NewExitError(fmt.Sprintf("Error reading config file: %s", err), -1)
+		}
+		pendingVersions = make(map[string]fastly.Version)
+
+		services, err := client.ListServices(&fastly.ListServicesInput{})
+		if err != nil {
+			return cli.NewExitError(fmt.Sprintf("Error listing services: %s", err), -1)
+		}
+		for _, s := range services {
+			// Only configure services for which configs have been specified
+			if _, ok := siteConfigs[s.Name]; !ok {
+				continue
+			}
+			fmt.Println("Syncing ", s.Name)
+			if err = syncVcls(client, s); err != nil {
+				return cli.NewExitError(fmt.Sprintf("Error syncing VCLs: %s", err), -1)
+			}
+			if err = syncConfig(client, s); err != nil {
+				return cli.NewExitError(fmt.Sprintf("Error syncing service config for %s: %s", s.Name, err), -1)
+			}
+		}
+		return nil
 	}
-	for _, s := range services {
-		// Only configure services for which configs have been specified
-		if _, ok := siteConfigs[s.Name]; !ok {
-			continue
-		}
-		fmt.Println("Syncing ", s.Name)
-		if err = syncVcls(client, s); err != nil {
-			log.Fatalf("Error syncing VCLs: %s", err)
-		}
-		if err = syncConfig(client, s); err != nil {
-			log.Fatalf("Error syncing service config: %s", err)
-		}
-	}
+
+	app.Run(os.Args)
 }
