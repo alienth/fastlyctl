@@ -835,7 +835,7 @@ func main() {
 			Usage:  "Fastly API Key.",
 			EnvVar: "FASTLY_KEY",
 		},
-		cli.StringFlag{
+		cli.BoolFlag{
 			Name:  "debug, d",
 			Usage: "Print more detailed info for debugging.",
 		},
