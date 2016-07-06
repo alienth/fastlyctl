@@ -762,8 +762,8 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 }
 
 func syncConfig(c *cli.Context) error {
-	fastlyKey := c.String("fastlyKey")
-	configFile := c.String("configFile")
+	fastlyKey := c.GlobalString("fastly-key")
+	configFile := c.GlobalString("config")
 	if fastlyKey == "" {
 		cli.ShowAppHelp(c)
 		return cli.NewExitError("Error: Fastly API key must be set.", -1)
@@ -831,7 +831,7 @@ func main() {
 			Usage: "Load Fastly configuration from `FILE`",
 		},
 		cli.StringFlag{
-			Name:   "K",
+			Name:   "fastly-key, K",
 			Usage:  "Fastly API Key.",
 			EnvVar: "FASTLY_KEY",
 		},
