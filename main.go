@@ -542,7 +542,7 @@ func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []fastly
 	return nil
 }
 
-func syncConfig(client *fastly.Client, s *fastly.Service) error {
+func syncService(client *fastly.Client, s *fastly.Service) error {
 	var activeVersion = strconv.Itoa(int(s.ActiveVersion))
 	var config SiteConfig
 	if _, ok := siteConfigs[s.Name]; ok {
@@ -761,6 +761,56 @@ func syncConfig(client *fastly.Client, s *fastly.Service) error {
 	return nil
 }
 
+func syncConfig(c *cli.Context) error {
+	fastlyKey := c.String("fastlyKey")
+	configFile := c.String("configFile")
+	if fastlyKey == "" {
+		cli.ShowAppHelp(c)
+		return cli.NewExitError("Error: Fastly API key must be set.", -1)
+	}
+
+	if (!c.Bool("all") && !c.Args().Present()) || (c.Bool("all") && c.Args().Present()) {
+		cli.ShowAppHelp(c)
+		return cli.NewExitError("Error: either specify service names to be syncd, or sync all with -a", -1)
+	}
+	client, err := fastly.NewClient(fastlyKey)
+	if err != nil {
+		return cli.NewExitError(fmt.Sprintf("Error initializing fastly client: %s", err), -1)
+	}
+
+	if err := readConfig(configFile); err != nil {
+		return cli.NewExitError(fmt.Sprintf("Error reading config file: %s", err), -1)
+	}
+	pendingVersions = make(map[string]fastly.Version)
+
+	services, err := client.ListServices(&fastly.ListServicesInput{})
+	if err != nil {
+		return cli.NewExitError(fmt.Sprintf("Error listing services: %s", err), -1)
+	}
+	foundService := false
+	for _, s := range services {
+		// Only configure services for which configs have been specified
+		if _, ok := siteConfigs[s.Name]; !ok {
+			continue
+		}
+		if !c.Bool("all") && !stringInSlice(s.Name, c.Args()) {
+			continue
+		}
+		foundService = true
+		fmt.Println("Syncing ", s.Name)
+		if err = syncVcls(client, s); err != nil {
+			return cli.NewExitError(fmt.Sprintf("Error syncing VCLs: %s", err), -1)
+		}
+		if err = syncService(client, s); err != nil {
+			return cli.NewExitError(fmt.Sprintf("Error syncing service config for %s: %s", s.Name, err), -1)
+		}
+	}
+	if !foundService {
+		return cli.NewExitError(fmt.Sprintf("No matching services could be found to be sync'd."), -1)
+	}
+	return nil
+}
+
 func stringInSlice(check string, slice []string) bool {
 	for _, element := range slice {
 		if element == check {
@@ -774,19 +824,16 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "fastlyctl"
 
-	var configFile, fastlyKey string
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:        "config, c",
-			Value:       "config.toml",
-			Usage:       "Load Fastly configuration from `FILE`",
-			Destination: &configFile,
+			Name:  "config, c",
+			Value: "config.toml",
+			Usage: "Load Fastly configuration from `FILE`",
 		},
 		cli.StringFlag{
-			Name:        "K",
-			Usage:       "Fastly API Key.",
-			Destination: &fastlyKey,
-			EnvVar:      "FASTLY_KEY",
+			Name:   "K",
+			Usage:  "Fastly API Key.",
+			EnvVar: "FASTLY_KEY",
 		},
 	}
 
@@ -803,53 +850,7 @@ func main() {
 					Usage: "Sync all services listed in config file",
 				},
 			},
-			Action: func(c *cli.Context) error {
-				if fastlyKey == "" {
-					cli.ShowAppHelp(c)
-					return cli.NewExitError("Error: Fastly API key must be set.", -1)
-				}
-
-				if (!c.Bool("all") && !c.Args().Present()) || (c.Bool("all") && c.Args().Present()) {
-					cli.ShowAppHelp(c)
-					return cli.NewExitError("Error: either specify service names to be syncd, or sync all with -a", -1)
-				}
-				client, err := fastly.NewClient(fastlyKey)
-				if err != nil {
-					return cli.NewExitError(fmt.Sprintf("Error initializing fastly client: %s", err), -1)
-				}
-
-				if err := readConfig(configFile); err != nil {
-					return cli.NewExitError(fmt.Sprintf("Error reading config file: %s", err), -1)
-				}
-				pendingVersions = make(map[string]fastly.Version)
-
-				services, err := client.ListServices(&fastly.ListServicesInput{})
-				if err != nil {
-					return cli.NewExitError(fmt.Sprintf("Error listing services: %s", err), -1)
-				}
-				foundService := false
-				for _, s := range services {
-					// Only configure services for which configs have been specified
-					if _, ok := siteConfigs[s.Name]; !ok {
-						continue
-					}
-					if !c.Bool("all") && !stringInSlice(s.Name, c.Args()) {
-						continue
-					}
-					foundService = true
-					fmt.Println("Syncing ", s.Name)
-					if err = syncVcls(client, s); err != nil {
-						return cli.NewExitError(fmt.Sprintf("Error syncing VCLs: %s", err), -1)
-					}
-					if err = syncConfig(client, s); err != nil {
-						return cli.NewExitError(fmt.Sprintf("Error syncing service config for %s: %s", s.Name, err), -1)
-					}
-				}
-				if !foundService {
-					return cli.NewExitError(fmt.Sprintf("No matching services could be found to be sync'd."), -1)
-				}
-				return nil
-			},
+			Action: syncConfig,
 		},
 	}
 
