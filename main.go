@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bytes"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -38,6 +35,7 @@ type SiteConfig struct {
 	Directors        []fastly.CreateDirectorInput
 	DirectorBackends []fastly.CreateDirectorBackendInput
 	HealthChecks     []fastly.CreateHealthCheckInput
+	VCLs             []VCL
 
 	// Override for backend SSLCertHostnames
 	// Used in cases where _servicename_ is not sufficient for defining
@@ -47,6 +45,13 @@ type SiteConfig struct {
 
 	IPPrefix string
 	IPSuffix string
+}
+
+type VCL struct {
+	Name    string
+	Content []byte
+	File    string
+	Main    bool
 }
 
 func readConfig(file string) error {
@@ -115,48 +120,51 @@ func prepareNewVersion(client *fastly.Client, s *fastly.Service) (fastly.Version
 	return *newversion, nil
 }
 
-func syncVcls(client *fastly.Client, s *fastly.Service) error {
-	hasher := sha256.New()
-	var activeVersion = strconv.Itoa(int(s.ActiveVersion))
-	vcls, err := client.ListVCLs(&fastly.ListVCLsInput{Service: s.ID, Version: activeVersion})
+func syncVCLs(client *fastly.Client, s *fastly.Service, newVCLs []VCL) error {
+	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
 		return err
 	}
-
-	for _, v := range vcls {
-		filename := v.Name + ".vcl"
-		f, err := os.Open(filename)
-		if err != nil {
+	existingVCLs, err := client.ListVCLs(&fastly.ListVCLsInput{Service: s.ID, Version: newversion.Number})
+	if err != nil {
+		return err
+	}
+	for _, vcl := range existingVCLs {
+		if err = client.DeleteVCL(&fastly.DeleteVCLInput{Service: s.ID, Name: vcl.Name, Version: newversion.Number}); err != nil {
 			return err
 		}
-		defer f.Close()
-		if _, err := io.Copy(hasher, f); err != nil {
+	}
+
+	for _, vcl := range newVCLs {
+		var content []byte
+		if vcl.File != "" && vcl.Content != nil {
+			return fmt.Errorf("Cannot specify both a File and Content for VCL %s", vcl.Name)
+		}
+		if vcl.File != "" {
+			if content, err = ioutil.ReadFile(vcl.File); err != nil {
+				return err
+			}
+		} else if vcl.Content != nil {
+			content = vcl.Content
+		} else {
+			return fmt.Errorf("No Content or File specified for VCL %s", vcl.Name)
+		}
+
+		var i fastly.CreateVCLInput
+		i.Name = vcl.Name
+		i.Service = s.ID
+		i.Version = newversion.Number
+		i.Content = string(content)
+
+		if _, err = client.CreateVCL(&i); err != nil {
 			return err
 		}
-		localsum := hasher.Sum(nil)
-		hasher.Reset()
-
-		hasher.Write([]byte(v.Content))
-		remotesum := hasher.Sum(nil)
-		hasher.Reset()
-
-		if !bytes.Equal(localsum, remotesum) {
-			fmt.Printf("VCL mismatch on service %s VCL %s. Updating.\n", s.Name, v.Name)
-			content, err := ioutil.ReadFile(filename)
-			if err != nil {
-				return err
-			}
-
-			//newversion, err := client.CloneVersion(&fastly.CloneVersionInput{Service: s.ID, Version: activeVersion})
-			newversion, err := prepareNewVersion(client, s)
-			if err != nil {
-				return err
-			}
-			if _, err = client.UpdateVCL(&fastly.UpdateVCLInput{Name: v.Name, Service: s.ID, Version: newversion.Number, Content: string(content)}); err != nil {
+		if vcl.Main {
+			// Activate actually toggles a VCL to be the 'main' one
+			if _, err := client.ActivateVCL(&fastly.ActivateVCLInput{Name: vcl.Name, Service: s.ID, Version: newversion.Number}); err != nil {
 				return err
 			}
 		}
-
 	}
 	return nil
 }
@@ -729,6 +737,19 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 
+	remoteVCLs, _ := client.ListVCLs(&fastly.ListVCLsInput{Service: s.ID, Version: activeVersion})
+	if err != nil {
+		return err
+	}
+	if !(len(config.VCLs) == 0 && len(remoteVCLs) == 0) {
+		if debug {
+			fmt.Printf("Syncing %s for %s\n", "VCLs", s.Name)
+		}
+		if err := syncVCLs(client, s, config.VCLs); err != nil {
+			return fmt.Errorf("Error syncing VCLs: %s", err)
+		}
+	}
+
 	remoteDirectors, _ := client.ListDirectors(&fastly.ListDirectorsInput{Service: s.ID, Version: activeVersion})
 	if err != nil {
 		return err
@@ -798,9 +819,6 @@ func syncConfig(c *cli.Context) error {
 		}
 		foundService = true
 		fmt.Println("Syncing ", s.Name)
-		if err = syncVcls(client, s); err != nil {
-			return cli.NewExitError(fmt.Sprintf("Error syncing VCLs: %s", err), -1)
-		}
 		if err = syncService(client, s); err != nil {
 			return cli.NewExitError(fmt.Sprintf("Error syncing service config for %s: %s", s.Name, err), -1)
 		}
@@ -853,7 +871,7 @@ func main() {
 				},
 			},
 			Before: func(c *cli.Context) error {
-				debug = c.Bool("debug")
+				debug = c.GlobalBool("debug")
 				return nil
 			},
 			Action: syncConfig,
