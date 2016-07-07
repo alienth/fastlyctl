@@ -864,6 +864,8 @@ func syncConfig(c *cli.Context) error {
 		return cli.NewExitError(fmt.Sprintf("Error listing services: %s", err), -1)
 	}
 	foundService := false
+	// TODO Prompt if a version requested to be updated does not exist in Fastly, or
+	// provide a way to autocreate it.
 	for _, s := range services {
 		// Only configure services for which configs have been specified
 		if _, ok := siteConfigs[s.Name]; !ok {
