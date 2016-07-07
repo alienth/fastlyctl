@@ -71,6 +71,16 @@ func readConfig(file string) error {
 		return fmt.Errorf("Unknown config file type for file %s\n", file)
 	}
 
+	outfile, _ := os.OpenFile("out.toml", os.O_CREATE|os.O_RDWR, 0644)
+	encoder := toml.NewEncoder(outfile)
+	encoder.Encode(&siteConfigs)
+	outfile.Close()
+
+	outfile, _ = os.OpenFile("out.json", os.O_CREATE|os.O_RDWR, 0644)
+	jencoder := json.NewEncoder(outfile)
+	jencoder.Encode(&siteConfigs)
+	outfile.Close()
+
 	for name, config := range siteConfigs {
 		if name == "_default_" {
 			continue
@@ -81,6 +91,7 @@ func readConfig(file string) error {
 		}
 		siteConfigs[name] = config
 	}
+
 	return nil
 }
 
