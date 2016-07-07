@@ -791,6 +791,15 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 	}
 
 	if version, ok := pendingVersions[s.ID]; ok {
+		equal, err := versionsEqual(client, s, activeVersion, version.Number)
+		if err != nil {
+			return err
+		}
+		if equal {
+			fmt.Printf("No changes for service %s\n", s.Name)
+			delete(pendingVersions, s.ID)
+			return nil
+		}
 		var i fastly.GetDiffInput
 		i.From = activeVersion
 		i.To = version.Number
@@ -802,6 +811,30 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 	}
 
 	return nil
+}
+
+// Returns true if two versions of a given service are identical.  Generated
+// VCL is not suitable as the ordering output of GeneratedVCL is
+// non-deterministic.  As such, this function generates a known-noop diff by
+// comparing a version with itself, and then generating a diff between the from
+// and to versions.  If the two diffs are identical, then there is no
+// difference between from and to.
+func versionsEqual(c *fastly.Client, s *fastly.Service, from string, to string) (bool, error) {
+	var i fastly.GetDiffInput
+	i.Service = s.ID
+	// Intentional
+	i.To = from
+	i.From = from
+	noDiff, err := c.GetDiff(&i)
+	if err != nil {
+		return false, err
+	}
+	i.To = to
+	diff, err := c.GetDiff(&i)
+	if err != nil {
+		return false, err
+	}
+	return noDiff.Diff == diff.Diff, nil
 }
 
 func syncConfig(c *cli.Context) error {
