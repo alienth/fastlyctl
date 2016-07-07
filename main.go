@@ -837,6 +837,39 @@ func versionsEqual(c *fastly.Client, s *fastly.Service, from string, to string) 
 	return noDiff.Diff == diff.Diff, nil
 }
 
+func prompt(question string) (bool, error) {
+	var input string
+	for {
+		fmt.Printf("%s (y/n): ", question)
+		if _, err := fmt.Scanln(&input); err != nil {
+			return false, err
+		}
+		if input == "y" {
+			return true, nil
+		} else if input == "n" {
+			return false, nil
+		} else {
+			fmt.Printf("Invalid input: %s", input)
+		}
+	}
+}
+
+func activateVersion(client *fastly.Client, s *fastly.Service, v *fastly.Version) error {
+	var activeVersion = strconv.Itoa(int(s.ActiveVersion))
+	diff, err := client.GetDiff(&fastly.GetDiffInput{Service: s.ID, Format: "text", From: activeVersion, To: v.Number})
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Diff for %s:\n\n", s.Name)
+	fmt.Println(diff.Diff)
+	proceed, err := prompt("Activate version " + v.Number + " for service " + s.Name + "?")
+	if err != nil {
+		return err
+	}
+	fmt.Println(proceed)
+	return nil
+}
+
 func syncConfig(c *cli.Context) error {
 	fastlyKey := c.GlobalString("fastly-key")
 	configFile := c.GlobalString("config")
@@ -878,6 +911,11 @@ func syncConfig(c *cli.Context) error {
 		fmt.Println("Syncing ", s.Name)
 		if err = syncService(client, s); err != nil {
 			return cli.NewExitError(fmt.Sprintf("Error syncing service config for %s: %s", s.Name, err), -1)
+		}
+		if version, ok := pendingVersions[s.ID]; ok {
+			if err = activateVersion(client, s, &version); err != nil {
+				return cli.NewExitError(fmt.Sprintf("Error activating pending version %s for service %s: %s", version.Number, s.Name, err), -1)
+			}
 		}
 	}
 	if !foundService {
