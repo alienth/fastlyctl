@@ -779,6 +779,17 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 
+	if version, ok := pendingVersions[s.ID]; ok {
+		var i fastly.GetDiffInput
+		i.From = activeVersion
+		i.To = version.Number
+		i.Service = s.ID
+		i.Format = "text"
+		diff, _ := client.GetDiff(&i)
+		ioutil.WriteFile(s.Name+".diff", []byte(diff.Diff), 0644)
+		fmt.Println("wrote diff for ", s.Name)
+	}
+
 	return nil
 }
 
