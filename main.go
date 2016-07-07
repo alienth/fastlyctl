@@ -1018,6 +1018,23 @@ func main() {
 				},
 			},
 		},
+		cli.Command{
+			Name:  "service",
+			Usage: "Manage services.",
+			Before: func(c *cli.Context) error {
+				if err := checkFastlyKey(c); err != nil {
+					return err
+				}
+				return nil
+			},
+			Subcommands: cli.Commands{
+				cli.Command{
+					Name:   "list",
+					Usage:  "List services associated with account",
+					Action: serviceList,
+				},
+			},
+		},
 	}
 
 	app.Run(os.Args)
