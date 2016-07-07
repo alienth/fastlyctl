@@ -965,10 +965,58 @@ func main() {
 				},
 			},
 			Before: func(c *cli.Context) error {
+				if err := checkFastlyKey(c); err != nil {
+					return err
+				}
+				if (!c.Bool("all") && !c.Args().Present()) || (c.Bool("all") && c.Args().Present()) {
+					cli.ShowAppHelp(c)
+					return cli.NewExitError("Error: either specify service names to be syncd, or sync all with -a", -1)
+				}
 				debug = c.GlobalBool("debug")
 				return nil
 			},
 			Action: syncConfig,
+		},
+		cli.Command{
+			Name:    "version",
+			Aliases: []string{"v"},
+			Usage:   "Manage service versions.",
+			Before: func(c *cli.Context) error {
+				if err := checkFastlyKey(c); err != nil {
+					return err
+				}
+				if !c.Args().Present() {
+					cli.ShowAppHelp(c)
+					return cli.NewExitError("Please specify service.", -1)
+				}
+				return nil
+			},
+			Subcommands: cli.Commands{
+				cli.Command{
+					Name:   "list",
+					Usage:  "List versions associated with a given service",
+					Action: versionList,
+				},
+				cli.Command{
+					Name:   "validate",
+					Usage:  "Validate a specified VERSION",
+					Action: versionValidate,
+					Before: func(c *cli.Context) error {
+						if err := checkFastlyKey(c); err != nil {
+							return err
+						}
+						if !c.Args().Present() {
+							cli.ShowAppHelp(c)
+							return cli.NewExitError("Please specify service.", -1)
+						}
+						if _, err := strconv.Atoi(c.Args().Get(1)); err != nil {
+							cli.ShowAppHelp(c)
+							return cli.NewExitError("Please specify version to validate.", -1)
+						}
+						return nil
+					},
+				},
+			},
 		},
 	}
 
