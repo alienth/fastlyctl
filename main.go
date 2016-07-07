@@ -873,15 +873,7 @@ func activateVersion(client *fastly.Client, s *fastly.Service, v *fastly.Version
 func syncConfig(c *cli.Context) error {
 	fastlyKey := c.GlobalString("fastly-key")
 	configFile := c.GlobalString("config")
-	if fastlyKey == "" {
-		cli.ShowAppHelp(c)
-		return cli.NewExitError("Error: Fastly API key must be set.", -1)
-	}
 
-	if (!c.Bool("all") && !c.Args().Present()) || (c.Bool("all") && c.Args().Present()) {
-		cli.ShowAppHelp(c)
-		return cli.NewExitError("Error: either specify service names to be syncd, or sync all with -a", -1)
-	}
 	client, err := fastly.NewClient(fastlyKey)
 	if err != nil {
 		return cli.NewExitError(fmt.Sprintf("Error initializing fastly client: %s", err), -1)
@@ -931,6 +923,13 @@ func stringInSlice(check string, slice []string) bool {
 		}
 	}
 	return false
+}
+
+func checkFastlyKey(c *cli.Context) *cli.ExitError {
+	if c.GlobalString("fastly-key") == "" {
+		return cli.NewExitError("Error: Fastly API key must be set.", -1)
+	}
+	return nil
 }
 
 func main() {
