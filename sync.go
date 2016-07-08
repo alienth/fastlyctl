@@ -579,9 +579,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return err
 	}
 	if !(len(config.Conditions) == 0 && len(remoteConditions) == 0) {
-		if debug {
-			fmt.Printf("Syncing %s for %s\n", "conditions", s.Name)
-		}
+		debugPrint("Syncing conditions\n")
 		if err := syncConditions(client, s, config.Conditions); err != nil {
 			return fmt.Errorf("Error syncing conditions: %s", err)
 		}
@@ -592,9 +590,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return err
 	}
 	if !(len(config.HealthChecks) == 0 && len(remoteHealthChecks) == 0) {
-		if debug {
-			fmt.Printf("Syncing %s for %s\n", "health checks", s.Name)
-		}
+		debugPrint("Syncing health checks\n")
 		if err := syncHealthChecks(client, s, config.HealthChecks); err != nil {
 			return fmt.Errorf("Error syncing health checks: %s", err)
 		}
@@ -605,9 +601,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return err
 	}
 	if !(len(config.CacheSettings) == 0 && len(remoteCacheSettings) == 0) {
-		if debug {
-			fmt.Printf("Syncing %s for %s\n", "cache settings", s.Name)
-		}
+		debugPrint("Syncing health checks\n")
 		if err := syncCacheSettings(client, s, config.CacheSettings); err != nil {
 			return fmt.Errorf("Error syncing cache settings: %s", err)
 		}
@@ -618,9 +612,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return err
 	}
 	if !(len(config.Backends) == 0 && len(remoteBackends) == 0) {
-		if debug {
-			fmt.Printf("Syncing %s for %s\n", "backends", s.Name)
-		}
+		debugPrint("Syncing backends\n")
 		if err := syncBackends(client, s, config.Backends); err != nil {
 			return fmt.Errorf("Error syncing backends: %s", err)
 		}
@@ -631,9 +623,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return err
 	}
 	if !(len(config.Headers) == 0 && len(remoteHeaders) == 0) {
-		if debug {
-			fmt.Printf("Syncing %s for %s\n", "headers", s.Name)
-		}
+		debugPrint("Syncing headers\n")
 		if err := syncHeaders(client, s, config.Headers); err != nil {
 			return fmt.Errorf("Error syncing headers: %s", err)
 		}
@@ -644,9 +634,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return err
 	}
 	if !(len(config.Syslogs) == 0 && len(remoteSyslogs) == 0) {
-		if debug {
-			fmt.Printf("Syncing %s for %s\n", "syslogs", s.Name)
-		}
+		debugPrint("Syncing syslogs\n")
 		if err := syncSyslogs(client, s, config.Syslogs); err != nil {
 			return fmt.Errorf("Error syncing syslogs: %s", err)
 		}
@@ -657,9 +645,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return err
 	}
 	if !(len(config.Papertrails) == 0 && len(remotePapertrails) == 0) {
-		if debug {
-			fmt.Printf("Syncing %s for %s\n", "papertrails", s.Name)
-		}
+		debugPrint("Syncing papertrails\n")
 		if err := syncPapertrails(client, s, config.Papertrails); err != nil {
 			return fmt.Errorf("Error syncing papertrail: %s", err)
 		}
@@ -670,9 +656,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return err
 	}
 	if !(len(config.Sumologics) == 0 && len(remoteSumologics) == 0) {
-		if debug {
-			fmt.Printf("Syncing %s for %s\n", "sumologics", s.Name)
-		}
+		debugPrint("Syncing sumologics\n")
 		if err := syncSumologics(client, s, config.Sumologics); err != nil {
 			return fmt.Errorf("Error syncing sumologics: %s", err)
 		}
@@ -683,9 +667,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return err
 	}
 	if !(len(config.FTPs) == 0 && len(remoteFTPs) == 0) {
-		if debug {
-			fmt.Printf("Syncing %s for %s\n", "ftps", s.Name)
-		}
+		debugPrint("Syncing ftps\n")
 		if err := syncFTPs(client, s, config.FTPs); err != nil {
 			return fmt.Errorf("Error syncing ftps: %s", err)
 		}
@@ -696,9 +678,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return err
 	}
 	if !(len(config.GCSs) == 0 && len(remoteGCSs) == 0) {
-		if debug {
-			fmt.Printf("Syncing %s for %s\n", "gcss", s.Name)
-		}
+		debugPrint("Syncing GCSs\n")
 		if err := syncGCSs(client, s, config.GCSs); err != nil {
 			return err
 		}
@@ -709,9 +689,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return err
 	}
 	if !(len(config.S3s) == 0 && len(remoteS3s) == 0) {
-		if debug {
-			fmt.Printf("Syncing %s for %s\n", "s3s", s.Name)
-		}
+		debugPrint("Syncing S3s\n")
 		if err := syncS3s(client, s, config.S3s); err != nil {
 			return fmt.Errorf("Error syncing s3s: %s", err)
 		}
@@ -722,17 +700,13 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return err
 	}
 	if !(len(config.Domains) == 0 && len(remoteDomains) == 0) {
-		if debug {
-			fmt.Printf("Syncing %s for %s\n", "domains", s.Name)
-		}
+		debugPrint("Syncing domains\n")
 		if err := syncDomains(client, s, config.Domains); err != nil {
 			return fmt.Errorf("Error syncing domains: %s", err)
 		}
 	}
 
-	if debug {
-		fmt.Printf("Syncing %s for %s\n", "settings", s.Name)
-	}
+	debugPrint("Syncing settings\n")
 	if err := syncSettings(client, s, config.Settings); err != nil {
 		return fmt.Errorf("Error syncing settings: %s", err)
 	}
@@ -742,9 +716,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return err
 	}
 	if !(len(config.Gzips) == 0 && len(remoteGzips) == 0) {
-		if debug {
-			fmt.Printf("Syncing %s for %s\n", "gzips", s.Name)
-		}
+		debugPrint("Syncing gzips\n")
 		if err := syncGzips(client, s, config.Gzips); err != nil {
 			return fmt.Errorf("Error syncing gzips: %s", err)
 		}
@@ -755,9 +727,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return err
 	}
 	if !(len(config.VCLs) == 0 && len(remoteVCLs) == 0) {
-		if debug {
-			fmt.Printf("Syncing %s for %s\n", "VCLs", s.Name)
-		}
+		debugPrint("Syncing VCLs\n")
 		if err := syncVCLs(client, s, config.VCLs); err != nil {
 			return fmt.Errorf("Error syncing VCLs: %s", err)
 		}
@@ -779,9 +749,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 	if !(len(config.Directors) == 0 && len(remoteDirectors) == 0) || !mappingsInSync {
-		if debug {
-			fmt.Printf("Syncing %s for %s\n", "directors", s.Name)
-		}
+		debugPrint("Syncing directors\n")
 		if err := syncDirectors(client, s, config.Directors); err != nil {
 			return fmt.Errorf("Error syncing directors: %s", err)
 		}

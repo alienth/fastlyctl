@@ -182,3 +182,9 @@ func getPager() *exec.Cmd {
 	}
 	return nil
 }
+
+func debugPrint(message string) {
+	if debug {
+		fmt.Print(message)
+	}
+}
