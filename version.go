@@ -53,3 +53,25 @@ func versionValidate(c *cli.Context) error {
 
 	return nil
 }
+
+func versionActivate(c *cli.Context) error {
+	client, err := fastly.NewClient(c.GlobalString("fastly-key"))
+	if err != nil {
+		return cli.NewExitError(fmt.Sprintf("Error initializing fastly client: %s", err), -1)
+	}
+	serviceParam := c.Args().Get(0)
+	versionNumber := c.Args().Get(1)
+	var service *fastly.Service
+	if service, err = getServiceByNameOrID(client, serviceParam); err != nil {
+		return cli.NewExitError(err.Error(), -1)
+	}
+	var version *fastly.Version
+	if version, err = client.GetVersion(&fastly.GetVersionInput{Service: service.ID, Version: versionNumber}); err != nil {
+		return cli.NewExitError(fmt.Sprintf("Error fetching version: %s", err), -1)
+	}
+	if err = activateVersion(client, service, version); err != nil {
+		return cli.NewExitError(fmt.Sprintf("Error activating version: %s", err), -1)
+	}
+
+	return nil
+}

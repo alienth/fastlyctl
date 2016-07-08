@@ -872,7 +872,11 @@ func activateVersion(client *fastly.Client, s *fastly.Service, v *fastly.Version
 	if err != nil {
 		return err
 	}
-	fmt.Println(proceed)
+	if proceed {
+		if _, err = client.ActivateVersion(&fastly.ActivateVersionInput{Service: s.ID, Version: v.Number}); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -1014,6 +1018,18 @@ func main() {
 							return cli.NewExitError("Please specify version to validate.", -1)
 						}
 						return nil
+					},
+				},
+				cli.Command{
+					Name:   "activate",
+					Usage:  "Activate a specified VERSION",
+					Action: versionActivate,
+					Before: func(c *cli.Context) error {
+						if _, err := strconv.Atoi(c.Args().Get(1)); err != nil {
+							cli.ShowAppHelp(c)
+							return cli.NewExitError("Please specify version to activate.", -1)
+						}
+						return versionValidate(c)
 					},
 				},
 			},
