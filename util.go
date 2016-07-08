@@ -124,8 +124,9 @@ func activateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v
 }
 
 // Returns true if two versions of a given service are identical.  Generated
-// VCL is not suitable as the ordering output of GeneratedVCL is
-// non-deterministic.  As such, this function generates a known-noop diff by
+// VCL is not suitable as the ordering output of GeneratedVCL will vary if a
+// no-op change has been made to a config (for example, removing and re-adding
+// all domains). As such, this function generates a known-noop diff by
 // comparing a version with itself, and then generating a diff between the from
 // and to versions.  If the two diffs are identical, then there is no
 // difference between from and to.
