@@ -52,6 +52,10 @@ func main() {
 					Name:  "all, a",
 					Usage: "Sync all services listed in config file",
 				},
+				cli.BoolFlag{
+					Name:  "noop, n",
+					Usage: "Create new sync'd config versions, but do not activate.",
+				},
 			},
 			Before: func(c *cli.Context) error {
 				if err := checkFastlyKey(c); err != nil {
