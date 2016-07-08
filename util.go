@@ -123,6 +123,21 @@ func activateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v
 	return nil
 }
 
+// validateVersion takes in a service and version number and returns an
+// error if the version is invalid.
+func validateVersion(client *fastly.Client, service *fastly.Service, version string) error {
+	result, msg, err := client.ValidateVersion(&fastly.ValidateVersionInput{Service: service.ID, Version: version})
+	if err != nil {
+		return fmt.Errorf("Error validating version: %s", err)
+	}
+	if result {
+		fmt.Printf("Version %s on service %s successfully validated!\n", version, service.Name)
+	} else {
+		return fmt.Errorf("Version %s on service %s is invalid:\n\n%s", version, service.Name, msg)
+	}
+	return nil
+}
+
 // Returns true if two versions of a given service are identical.  Generated
 // VCL is not suitable as the ordering output of GeneratedVCL will vary if a
 // no-op change has been made to a config (for example, removing and re-adding

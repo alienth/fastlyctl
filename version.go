@@ -41,14 +41,8 @@ func versionValidate(c *cli.Context) error {
 	if service, err = getServiceByNameOrID(client, serviceParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
-	result, msg, err := client.ValidateVersion(&fastly.ValidateVersionInput{Service: service.ID, Version: version})
-	if err != nil {
-		return cli.NewExitError(fmt.Sprintf("Error validating version: %s", err), -1)
-	}
-	if result {
-		fmt.Printf("Version %s on service %s successfully validated!\n", version, service.Name)
-	} else {
-		return cli.NewExitError(fmt.Sprintf("Version %s on service %s is invalid:\n\n%s", version, service.Name, msg), -1)
+	if err := validateVersion(client, service, version); err != nil {
+		return cli.NewExitError(err.Error(), -1)
 	}
 
 	return nil
