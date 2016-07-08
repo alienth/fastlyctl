@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strconv"
 	"strings"
 
@@ -70,15 +69,14 @@ func readConfig(file string) error {
 		return fmt.Errorf("Unknown config file type for file %s\n", file)
 	}
 
-	outfile, _ := os.OpenFile("out.toml", os.O_CREATE|os.O_RDWR, 0644)
-	encoder := toml.NewEncoder(outfile)
-	encoder.Encode(&siteConfigs)
-	outfile.Close()
-
-	outfile, _ = os.OpenFile("out.json", os.O_CREATE|os.O_RDWR, 0644)
-	jencoder := json.NewEncoder(outfile)
-	jencoder.Encode(&siteConfigs)
-	outfile.Close()
+	//outfile, _ := os.OpenFile("out.toml", os.O_CREATE|os.O_RDWR, 0644)
+	//encoder := toml.NewEncoder(outfile)
+	//encoder.Encode(&siteConfigs)
+	//outfile.Close()
+	//outfile, _ = os.OpenFile("out.json", os.O_CREATE|os.O_RDWR, 0644)
+	//jencoder := json.NewEncoder(outfile)
+	//jencoder.Encode(&siteConfigs)
+	//outfile.Close()
 
 	for name, config := range siteConfigs {
 		if name == "_default_" {
@@ -770,14 +768,6 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 			delete(pendingVersions, s.ID)
 			return nil
 		}
-		var i fastly.GetDiffInput
-		i.From = activeVersion
-		i.To = version.Number
-		i.Service = s.ID
-		i.Format = "text"
-		diff, _ := client.GetDiff(&i)
-		ioutil.WriteFile(s.Name+".diff", []byte(diff.Diff), 0644)
-		fmt.Println("wrote diff for ", s.Name)
 	}
 
 	return nil
