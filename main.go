@@ -3,6 +3,9 @@ package main
 import (
 	"os"
 	"strconv"
+	"syscall"
+
+	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/urfave/cli"
 )
@@ -12,6 +15,15 @@ var debug bool
 func checkFastlyKey(c *cli.Context) *cli.ExitError {
 	if c.GlobalString("fastly-key") == "" {
 		return cli.NewExitError("Error: Fastly API key must be set.", -1)
+	}
+	return nil
+}
+
+func checkInteractive(c *cli.Context) *cli.ExitError {
+	interactive := terminal.IsTerminal(syscall.Stdin)
+	if !interactive && !c.GlobalBool("assume-yes") {
+		return cli.NewExitError("In non-interactive shell and --assume-yes not used, exiting.", -1)
+
 	}
 	return nil
 }
@@ -61,6 +73,9 @@ func main() {
 				if err := checkFastlyKey(c); err != nil {
 					return err
 				}
+				if err := checkInteractive(c); err != nil {
+					return err
+				}
 				if (!c.Bool("all") && !c.Args().Present()) || (c.Bool("all") && c.Args().Present()) {
 					return cli.NewExitError("Error: either specify service names to be syncd, or sync all with -a", -1)
 				}
@@ -108,6 +123,9 @@ func main() {
 					ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>] [<VERSION>]",
 					Action:    versionActivate,
 					Before: func(c *cli.Context) error {
+						if err := checkInteractive(c); err != nil {
+							return err
+						}
 						if _, err := strconv.Atoi(c.Args().Get(1)); err != nil {
 							return cli.NewExitError("Please specify version to activate.", -1)
 						}
