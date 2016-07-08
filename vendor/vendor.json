@@ -1,0 +1,37 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "UJTpOZ5IuuyoWFrS42uw/167mn0=",
+			"path": "github.com/BurntSushi/toml",
+			"revision": "f0aeabca5a127c4078abb8c8d64298b147264b55",
+			"revisionTime": "2016-04-26T10:16:13Z"
+		},
+		{
+			"checksumSHA1": "pXTGisymnD85PmNDbjcyRxhbkXc=",
+			"path": "github.com/alienth/go-fastly",
+			"revision": "eb27070e0a299bca031eed2b353835faa4d71c74",
+			"revisionTime": "2016-07-08T15:30:34Z"
+		},
+		{
+			"checksumSHA1": "hwGdeQbcfc2RvIQS5wAaYRKJDd4=",
+			"path": "github.com/imdario/mergo",
+			"revision": "50d4dbd4eb0e84778abe37cefef140271d96fade",
+			"revisionTime": "2016-05-17T06:44:35Z"
+		},
+		{
+			"checksumSHA1": "hx0Q1JrC6iQDYdkUdGldbzjDMV0=",
+			"path": "github.com/urfave/cli",
+			"revision": "1efa31f08b9333f1bd4882d61f9d668a70cd902e",
+			"revisionTime": "2016-06-28T05:30:56Z"
+		},
+		{
+			"checksumSHA1": "bA2gANkJBx2Br/p5GKYdhyGo3Pg=",
+			"path": "golang.org/x/crypto/ssh/terminal",
+			"revision": "c10c31b5e94b6f7a0283272dc2bb27163dcea24b",
+			"revisionTime": "2015-05-07T03:01:23Z"
+		}
+	],
+	"rootPath": "github.com/alienth/fastlyctl"
+}
