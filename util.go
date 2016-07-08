@@ -118,8 +118,8 @@ func activateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v
 		if _, err = client.ActivateVersion(&fastly.ActivateVersionInput{Service: s.ID, Version: v.Number}); err != nil {
 			return err
 		}
+		fmt.Printf("Activated version %s for %s. Old version: %s\n", v.Number, s.Name, activeVersion)
 	}
-	fmt.Printf("Activated version %s for %s. Old version: %s\n", v.Number, s.Name, activeVersion)
 	return nil
 }
 
