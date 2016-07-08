@@ -562,7 +562,10 @@ func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []fastly
 }
 
 func syncService(client *fastly.Client, s *fastly.Service) error {
-	var activeVersion = strconv.Itoa(int(s.ActiveVersion))
+	activeVersion, err := getActiveVersion(s)
+	if err != nil {
+		return err
+	}
 	var config SiteConfig
 	if _, ok := siteConfigs[s.Name]; ok {
 		config = siteConfigs[s.Name]
@@ -855,7 +858,10 @@ func prompt(question string) (bool, error) {
 }
 
 func activateVersion(client *fastly.Client, s *fastly.Service, v *fastly.Version) error {
-	var activeVersion = strconv.Itoa(int(s.ActiveVersion))
+	activeVersion, err := getActiveVersion(s)
+	if err != nil {
+		return err
+	}
 	diff, err := client.GetDiff(&fastly.GetDiffInput{Service: s.ID, Format: "text", From: activeVersion, To: v.Number})
 	if err != nil {
 		return err

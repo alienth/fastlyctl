@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/alienth/go-fastly"
 )
@@ -15,4 +16,21 @@ func getServiceByNameOrID(client *fastly.Client, identifier string) (*fastly.Ser
 		}
 	}
 	return service, nil
+}
+
+// getActiveVersion takes in a *fastly.Service and spits out the config version
+// that is currently active for that service.
+func getActiveVersion(service *fastly.Service) (string, error) {
+	// Depending on how the service was fetched, it may or may not
+	// have a filled ActiveVersion field.
+	if service.ActiveVersion != 0 {
+		return strconv.Itoa(int(service.ActiveVersion)), nil
+	} else {
+		for _, version := range service.Versions {
+			if version.Active {
+				return version.Number, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("Unable to find the active version for service %s", service.Name)
 }
