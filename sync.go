@@ -587,7 +587,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 
-	remoteHealthChecks, _ := client.ListHealthChecks(&fastly.ListHealthChecksInput{Service: s.ID, Version: activeVersion})
+	remoteHealthChecks, err := client.ListHealthChecks(&fastly.ListHealthChecksInput{Service: s.ID, Version: activeVersion})
 	if err != nil {
 		return err
 	}
@@ -600,7 +600,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 
-	remoteCacheSettings, _ := client.ListCacheSettings(&fastly.ListCacheSettingsInput{Service: s.ID, Version: activeVersion})
+	remoteCacheSettings, err := client.ListCacheSettings(&fastly.ListCacheSettingsInput{Service: s.ID, Version: activeVersion})
 	if err != nil {
 		return err
 	}
@@ -626,7 +626,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 
-	remoteHeaders, _ := client.ListHeaders(&fastly.ListHeadersInput{Service: s.ID, Version: activeVersion})
+	remoteHeaders, err := client.ListHeaders(&fastly.ListHeadersInput{Service: s.ID, Version: activeVersion})
 	if err != nil {
 		return err
 	}
@@ -639,7 +639,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 
-	remoteSyslogs, _ := client.ListSyslogs(&fastly.ListSyslogsInput{Service: s.ID, Version: activeVersion})
+	remoteSyslogs, err := client.ListSyslogs(&fastly.ListSyslogsInput{Service: s.ID, Version: activeVersion})
 	if err != nil {
 		return err
 	}
@@ -652,7 +652,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 
-	remotePapertrails, _ := client.ListPapertrails(&fastly.ListPapertrailsInput{Service: s.ID, Version: activeVersion})
+	remotePapertrails, err := client.ListPapertrails(&fastly.ListPapertrailsInput{Service: s.ID, Version: activeVersion})
 	if err != nil {
 		return err
 	}
@@ -665,7 +665,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 
-	remoteSumologics, _ := client.ListSumologics(&fastly.ListSumologicsInput{Service: s.ID, Version: activeVersion})
+	remoteSumologics, err := client.ListSumologics(&fastly.ListSumologicsInput{Service: s.ID, Version: activeVersion})
 	if err != nil {
 		return err
 	}
@@ -678,7 +678,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 
-	remoteFTPs, _ := client.ListFTPs(&fastly.ListFTPsInput{Service: s.ID, Version: activeVersion})
+	remoteFTPs, err := client.ListFTPs(&fastly.ListFTPsInput{Service: s.ID, Version: activeVersion})
 	if err != nil {
 		return err
 	}
@@ -691,7 +691,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 
-	remoteGCSs, _ := client.ListGCSs(&fastly.ListGCSsInput{Service: s.ID, Version: activeVersion})
+	remoteGCSs, err := client.ListGCSs(&fastly.ListGCSsInput{Service: s.ID, Version: activeVersion})
 	if err != nil {
 		return err
 	}
@@ -704,7 +704,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 
-	remoteS3s, _ := client.ListS3s(&fastly.ListS3sInput{Service: s.ID, Version: activeVersion})
+	remoteS3s, err := client.ListS3s(&fastly.ListS3sInput{Service: s.ID, Version: activeVersion})
 	if err != nil {
 		return err
 	}
@@ -717,7 +717,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 
-	remoteDomains, _ := client.ListDomains(&fastly.ListDomainsInput{Service: s.ID, Version: activeVersion})
+	remoteDomains, err := client.ListDomains(&fastly.ListDomainsInput{Service: s.ID, Version: activeVersion})
 	if err != nil {
 		return err
 	}
@@ -737,7 +737,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return fmt.Errorf("Error syncing settings: %s", err)
 	}
 
-	remoteGzips, _ := client.ListGzips(&fastly.ListGzipsInput{Service: s.ID, Version: activeVersion})
+	remoteGzips, err := client.ListGzips(&fastly.ListGzipsInput{Service: s.ID, Version: activeVersion})
 	if err != nil {
 		return err
 	}
@@ -750,7 +750,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 
-	remoteVCLs, _ := client.ListVCLs(&fastly.ListVCLsInput{Service: s.ID, Version: activeVersion})
+	remoteVCLs, err := client.ListVCLs(&fastly.ListVCLsInput{Service: s.ID, Version: activeVersion})
 	if err != nil {
 		return err
 	}
@@ -763,7 +763,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		}
 	}
 
-	remoteDirectors, _ := client.ListDirectors(&fastly.ListDirectorsInput{Service: s.ID, Version: activeVersion})
+	remoteDirectors, err := client.ListDirectors(&fastly.ListDirectorsInput{Service: s.ID, Version: activeVersion})
 	if err != nil {
 		return err
 	}
