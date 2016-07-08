@@ -985,7 +985,8 @@ func main() {
 				if err := checkFastlyKey(c); err != nil {
 					return err
 				}
-				if !c.Args().Present() {
+				// less than 2 here since the subcommand is the first Arg
+				if len(c.Args()) < 2 {
 					cli.ShowAppHelp(c)
 					return cli.NewExitError("Please specify service.", -1)
 				}
@@ -1002,13 +1003,6 @@ func main() {
 					Usage:  "Validate a specified VERSION",
 					Action: versionValidate,
 					Before: func(c *cli.Context) error {
-						if err := checkFastlyKey(c); err != nil {
-							return err
-						}
-						if !c.Args().Present() {
-							cli.ShowAppHelp(c)
-							return cli.NewExitError("Please specify service.", -1)
-						}
 						if _, err := strconv.Atoi(c.Args().Get(1)); err != nil {
 							cli.ShowAppHelp(c)
 							return cli.NewExitError("Please specify version to validate.", -1)
