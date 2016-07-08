@@ -816,70 +816,6 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 	return nil
 }
 
-// Returns true if two versions of a given service are identical.  Generated
-// VCL is not suitable as the ordering output of GeneratedVCL is
-// non-deterministic.  As such, this function generates a known-noop diff by
-// comparing a version with itself, and then generating a diff between the from
-// and to versions.  If the two diffs are identical, then there is no
-// difference between from and to.
-func versionsEqual(c *fastly.Client, s *fastly.Service, from string, to string) (bool, error) {
-	var i fastly.GetDiffInput
-	i.Service = s.ID
-	// Intentional
-	i.To = from
-	i.From = from
-	noDiff, err := c.GetDiff(&i)
-	if err != nil {
-		return false, err
-	}
-	i.To = to
-	diff, err := c.GetDiff(&i)
-	if err != nil {
-		return false, err
-	}
-	return noDiff.Diff == diff.Diff, nil
-}
-
-func prompt(question string) (bool, error) {
-	var input string
-	for {
-		fmt.Printf("%s (y/n): ", question)
-		if _, err := fmt.Scanln(&input); err != nil {
-			return false, err
-		}
-		if input == "y" {
-			return true, nil
-		} else if input == "n" {
-			return false, nil
-		} else {
-			fmt.Printf("Invalid input: %s", input)
-		}
-	}
-}
-
-func activateVersion(client *fastly.Client, s *fastly.Service, v *fastly.Version) error {
-	activeVersion, err := getActiveVersion(s)
-	if err != nil {
-		return err
-	}
-	diff, err := client.GetDiff(&fastly.GetDiffInput{Service: s.ID, Format: "text", From: activeVersion, To: v.Number})
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Diff for %s:\n\n", s.Name)
-	fmt.Println(diff.Diff)
-	proceed, err := prompt("Activate version " + v.Number + " for service " + s.Name + "?")
-	if err != nil {
-		return err
-	}
-	if proceed {
-		if _, err = client.ActivateVersion(&fastly.ActivateVersionInput{Service: s.ID, Version: v.Number}); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func syncConfig(c *cli.Context) error {
 	fastlyKey := c.GlobalString("fastly-key")
 	configFile := c.GlobalString("config")
@@ -924,15 +860,6 @@ func syncConfig(c *cli.Context) error {
 		return cli.NewExitError(fmt.Sprintf("No matching services could be found to be sync'd."), -1)
 	}
 	return nil
-}
-
-func stringInSlice(check string, slice []string) bool {
-	for _, element := range slice {
-		if element == check {
-			return true
-		}
-	}
-	return false
 }
 
 func checkFastlyKey(c *cli.Context) *cli.ExitError {
