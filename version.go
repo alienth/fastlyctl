@@ -69,7 +69,7 @@ func versionActivate(c *cli.Context) error {
 	if version, err = client.GetVersion(&fastly.GetVersionInput{Service: service.ID, Version: versionNumber}); err != nil {
 		return cli.NewExitError(fmt.Sprintf("Error fetching version: %s", err), -1)
 	}
-	if err = activateVersion(client, service, version); err != nil {
+	if err = activateVersion(c, client, service, version); err != nil {
 		return cli.NewExitError(fmt.Sprintf("Error activating version: %s", err), -1)
 	}
 

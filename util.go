@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/alienth/go-fastly"
+	"github.com/urfave/cli"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -64,11 +65,12 @@ func countChanges(diff *string) (int, int) {
 	return len(additions.FindAllString(*diff, -1)), len(removals.FindAllString(*diff, -1))
 }
 
-func activateVersion(client *fastly.Client, s *fastly.Service, v *fastly.Version) error {
+func activateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v *fastly.Version) error {
 	activeVersion, err := getActiveVersion(s)
 	if err != nil {
 		return err
 	}
+	assumeYes := c.GlobalBool("assume-yes")
 	diff, err := client.GetDiff(&fastly.GetDiffInput{Service: s.ID, Format: "text", From: activeVersion, To: v.Number})
 	if err != nil {
 		return err
@@ -78,12 +80,15 @@ func activateVersion(client *fastly.Client, s *fastly.Service, v *fastly.Version
 	pager := getPager()
 
 	additions, removals := countChanges(&diff.Diff)
-	proceed, err := prompt(fmt.Sprintf("%d additions and %d removals in diff. View?", additions, removals))
-	if err != nil {
-		return err
+	var proceed bool
+	if !assumeYes {
+		if proceed, err = prompt(fmt.Sprintf("%d additions and %d removals in diff. View?", additions, removals)); err != nil {
+			return err
+		}
 	}
-	if proceed {
-		if pager != nil && interactive {
+
+	if proceed || assumeYes {
+		if pager != nil && interactive && !assumeYes {
 			r, stdin := io.Pipe()
 			pager.Stdin = r
 			pager.Stdout = os.Stdout
@@ -104,14 +109,17 @@ func activateVersion(client *fastly.Client, s *fastly.Service, v *fastly.Version
 		}
 	}
 
-	if proceed, err = prompt("Activate version " + v.Number + " for service " + s.Name + "?"); err != nil {
-		return err
+	if !assumeYes {
+		if proceed, err = prompt("Activate version " + v.Number + " for service " + s.Name + "?"); err != nil {
+			return err
+		}
 	}
-	if proceed {
+	if proceed || assumeYes {
 		if _, err = client.ActivateVersion(&fastly.ActivateVersionInput{Service: s.ID, Version: v.Number}); err != nil {
 			return err
 		}
 	}
+	fmt.Printf("Activated version %s for %s. Old version: %s\n", v.Number, s.Name, activeVersion)
 	return nil
 }
 

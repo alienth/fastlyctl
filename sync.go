@@ -850,7 +850,7 @@ func syncConfig(c *cli.Context) error {
 			return cli.NewExitError(fmt.Sprintf("Error syncing service config for %s: %s", s.Name, err), -1)
 		}
 		if version, ok := pendingVersions[s.ID]; ok {
-			if err = activateVersion(client, s, &version); err != nil {
+			if err = activateVersion(c, client, s, &version); err != nil {
 				return cli.NewExitError(fmt.Sprintf("Error activating pending version %s for service %s: %s", version.Number, s.Name, err), -1)
 			}
 		}

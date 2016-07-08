@@ -35,6 +35,10 @@ func main() {
 			Name:  "debug, d",
 			Usage: "Print more detailed info for debugging.",
 		},
+		cli.BoolFlag{
+			Name:  "assume-yes, y",
+			Usage: "Assume 'yes' to all prompts. USE ONLY IF YOU ARE CERTAIN YOUR COMMANDS WON'T BREAK ANYTHING!",
+		},
 	}
 
 	app.Commands = []cli.Command{
