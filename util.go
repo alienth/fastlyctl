@@ -2,9 +2,15 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"regexp"
 	"strconv"
+	"syscall"
 
 	"github.com/alienth/go-fastly"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 func getServiceByNameOrID(client *fastly.Client, identifier string) (*fastly.Service, error) {
@@ -52,6 +58,12 @@ func prompt(question string) (bool, error) {
 	}
 }
 
+func countChanges(diff *string) (int, int) {
+	removals := regexp.MustCompile(`(^|\n)\-`)
+	additions := regexp.MustCompile(`(^|\n)\+`)
+	return len(additions.FindAllString(*diff, -1)), len(removals.FindAllString(*diff, -1))
+}
+
 func activateVersion(client *fastly.Client, s *fastly.Service, v *fastly.Version) error {
 	activeVersion, err := getActiveVersion(s)
 	if err != nil {
@@ -61,10 +73,38 @@ func activateVersion(client *fastly.Client, s *fastly.Service, v *fastly.Version
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Diff for %s:\n\n", s.Name)
-	fmt.Println(diff.Diff)
-	proceed, err := prompt("Activate version " + v.Number + " for service " + s.Name + "?")
+
+	interactive := terminal.IsTerminal(syscall.Stdin)
+	pager := getPager()
+
+	additions, removals := countChanges(&diff.Diff)
+	proceed, err := prompt(fmt.Sprintf("%d additions and %d removals in diff. View?", additions, removals))
 	if err != nil {
+		return err
+	}
+	if proceed {
+		if pager != nil && interactive {
+			r, stdin := io.Pipe()
+			pager.Stdin = r
+			pager.Stdout = os.Stdout
+			pager.Stderr = os.Stderr
+
+			c := make(chan struct{})
+			go func() {
+				defer close(c)
+				pager.Run()
+			}()
+
+			fmt.Fprintf(stdin, diff.Diff)
+			stdin.Close()
+			<-c
+		} else {
+			fmt.Printf("Diff for %s:\n\n", s.Name)
+			fmt.Println(diff.Diff)
+		}
+	}
+
+	if proceed, err = prompt("Activate version " + v.Number + " for service " + s.Name + "?"); err != nil {
 		return err
 	}
 	if proceed {
@@ -106,4 +146,15 @@ func stringInSlice(check string, slice []string) bool {
 		}
 	}
 	return false
+}
+
+func getPager() *exec.Cmd {
+	for _, pager := range [3]string{os.Getenv("PAGER"), "pager", "less"} {
+		// we expect some NotFounds, so ignore errors
+		path, _ := exec.LookPath(pager)
+		if path != "" {
+			return exec.Command(path)
+		}
+	}
+	return nil
 }
