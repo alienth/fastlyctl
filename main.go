@@ -39,9 +39,10 @@ func main() {
 
 	app.Commands = []cli.Command{
 		cli.Command{
-			Name:    "sync",
-			Aliases: []string{"s"},
-			Usage:   "Sync remote service configuration with local config file.",
+			Name:      "sync",
+			Aliases:   []string{"s"},
+			Usage:     "Sync remote service configuration with local config file.",
+			ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>]",
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:  "all, a",
@@ -53,7 +54,6 @@ func main() {
 					return err
 				}
 				if (!c.Bool("all") && !c.Args().Present()) || (c.Bool("all") && c.Args().Present()) {
-					cli.ShowAppHelp(c)
 					return cli.NewExitError("Error: either specify service names to be syncd, or sync all with -a", -1)
 				}
 				debug = c.GlobalBool("debug")
@@ -71,36 +71,36 @@ func main() {
 				}
 				// less than 2 here since the subcommand is the first Arg
 				if len(c.Args()) < 2 {
-					cli.ShowAppHelp(c)
 					return cli.NewExitError("Please specify service.", -1)
 				}
 				return nil
 			},
 			Subcommands: cli.Commands{
 				cli.Command{
-					Name:   "list",
-					Usage:  "List versions associated with a given service",
-					Action: versionList,
+					Name:      "list",
+					Usage:     "List versions associated with a given service",
+					Action:    versionList,
+					ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>]",
 				},
 				cli.Command{
-					Name:   "validate",
-					Usage:  "Validate a specified VERSION",
-					Action: versionValidate,
+					Name:      "validate",
+					Usage:     "Validate a specified VERSION",
+					ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>] [<VERSION>]",
+					Action:    versionValidate,
 					Before: func(c *cli.Context) error {
 						if _, err := strconv.Atoi(c.Args().Get(1)); err != nil {
-							cli.ShowAppHelp(c)
 							return cli.NewExitError("Please specify version to validate.", -1)
 						}
 						return nil
 					},
 				},
 				cli.Command{
-					Name:   "activate",
-					Usage:  "Activate a specified VERSION",
-					Action: versionActivate,
+					Name:      "activate",
+					Usage:     "Activate a specified VERSION",
+					ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>] [<VERSION>]",
+					Action:    versionActivate,
 					Before: func(c *cli.Context) error {
 						if _, err := strconv.Atoi(c.Args().Get(1)); err != nil {
-							cli.ShowAppHelp(c)
 							return cli.NewExitError("Please specify version to activate.", -1)
 						}
 						return versionValidate(c)
