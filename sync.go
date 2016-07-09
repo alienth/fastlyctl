@@ -33,6 +33,7 @@ type SiteConfig struct {
 	Directors        []fastly.CreateDirectorInput
 	DirectorBackends []fastly.CreateDirectorBackendInput
 	HealthChecks     []fastly.CreateHealthCheckInput
+	Dictionaries     []fastly.CreateDictionaryInput
 	VCLs             []VCL
 
 	// Override for backend SSLCertHostnames
@@ -528,6 +529,71 @@ func syncConditions(client *fastly.Client, s *fastly.Service, newConditions []fa
 	return nil
 }
 
+// syncDictionaries actually compares the remote side dictionaries, unlike most other sync functions.
+// This is because dictionary contents are not tied to a config version. If we were to delete the
+// dictionaries here, we'd lose whatever keys had been added since creation.
+// Returns true if we made any changes, as that means we are activatable despite there being no diff.
+func syncDictionaries(client *fastly.Client, s *fastly.Service, newDictionaries []fastly.CreateDictionaryInput) (bool, error) {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return false, err
+	}
+	var needsCreation []*fastly.CreateDictionaryInput
+	var needsDeletion []*fastly.DeleteDictionaryInput
+	existingDictionaries, err := client.ListDictionaries(&fastly.ListDictionariesInput{Service: s.ID, Version: newversion.Number})
+	if err != nil {
+		return false, err
+	}
+	for _, d := range existingDictionaries {
+		found := false
+		for _, n := range newDictionaries {
+			if d.Name == n.Name {
+				found = true
+			}
+		}
+		if !found {
+			var i fastly.DeleteDictionaryInput
+			i.Name = d.Name
+			i.Service = s.ID
+			i.Version = newversion.Number
+			needsDeletion = append(needsDeletion, &i)
+
+		}
+	}
+	for _, d := range newDictionaries {
+		found := false
+		for _, n := range existingDictionaries {
+			if d.Name == n.Name {
+				found = true
+			}
+		}
+		if !found {
+			var i fastly.CreateDictionaryInput
+			i.Name = d.Name
+			i.Service = s.ID
+			i.Version = newversion.Number
+			needsCreation = append(needsCreation, &i)
+		}
+	}
+
+	var needsSync bool
+	for _, d := range needsCreation {
+		needsSync = true
+		debugPrint(fmt.Sprintf("\t creating dictionary: %s\n", d.Name))
+		if _, err = client.CreateDictionary(d); err != nil {
+			return false, err
+		}
+	}
+	for _, d := range needsDeletion {
+		needsSync = true
+		debugPrint(fmt.Sprintf("\t deleting dictionary: %s\n", d.Name))
+		if err = client.DeleteDictionary(d); err != nil {
+			return false, err
+		}
+	}
+	return needsSync, nil
+}
+
 func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []fastly.CreateBackendInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
@@ -647,6 +713,18 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return fmt.Errorf("Error syncing VCLs: %s", err)
 	}
 
+	//remoteDictionaries, err := client.ListDictionaries(&fastly.ListDictionariesInput{Service: s.ID, Version: activeVersion})
+	//if err != nil {
+	//	return err
+	//}
+	//if !(len(config.Dictionaries) == 0 && len(remoteDictionaries) == 0) {
+	var mustSync bool
+	debugPrint("Syncing Dictionaries\n")
+	if mustSync, err = syncDictionaries(client, s, config.Dictionaries); err != nil {
+		return fmt.Errorf("Error syncing Dictionaries: %s", err)
+	}
+	//}
+
 	debugPrint("Syncing directors\n")
 	if err := syncDirectors(client, s, config.Directors); err != nil {
 		return fmt.Errorf("Error syncing directors: %s", err)
@@ -663,7 +741,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		if err != nil {
 			return err
 		}
-		if equal {
+		if equal && !mustSync {
 			fmt.Printf("No changes for service %s\n", s.Name)
 			delete(pendingVersions, s.ID)
 			return nil
