@@ -151,6 +151,29 @@ func main() {
 				},
 			},
 		},
+		cli.Command{
+			Name:    "dictionary",
+			Aliases: []string{"d"},
+			Usage:   "Manage dictionaries.",
+			Before: func(c *cli.Context) error {
+				if err := checkFastlyKey(c); err != nil {
+					return err
+				}
+				// less than 2 here since the subcommand is the first Arg
+				if len(c.Args()) < 2 {
+					return cli.NewExitError("Please specify service.", -1)
+				}
+				return nil
+			},
+			Subcommands: cli.Commands{
+				cli.Command{
+					Name:      "list",
+					Usage:     "List dictionaries associated with a given service",
+					Action:    dictionaryList,
+					ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>]",
+				},
+			},
+		},
 	}
 
 	app.Run(os.Args)
