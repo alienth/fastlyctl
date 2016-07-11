@@ -172,6 +172,24 @@ func main() {
 					Action:    dictionaryList,
 					ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>]",
 				},
+				cli.Command{
+					Name:      "item-add",
+					Usage:     "Add an item to a dictionary",
+					Action:    dictionaryAddItem,
+					ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>] <DICTIONARY_NAME> <ITEM_KEY> <ITEM_VALUE>",
+				},
+				cli.Command{
+					Name:      "item-rm",
+					Usage:     "Remove an item from a dictionary",
+					Action:    dictionaryRemoveItem,
+					ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>] <DICTIONARY_NAME> <ITEM_KEY>",
+				},
+				cli.Command{
+					Name:      "item-ls",
+					Usage:     "List items in a dictionary",
+					Action:    dictionaryListItems,
+					ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>] <DICTIONARY_NAME>",
+				},
 			},
 		},
 	}
