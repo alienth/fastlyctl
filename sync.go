@@ -636,8 +636,15 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		config = siteConfigs["_default_"]
 	}
 
-	// Conditions, health checks, and cache settings must be sync'd first, as if they're
-	// referenced in any other object the API will balk if they don't exist.
+	// Dictionaries, Conditions, health checks, and cache settings must be
+	// sync'd first, as if they're referenced in any other object the API
+	// will balk if they don't exist.
+	var mustSync bool
+	debugPrint("Syncing Dictionaries\n")
+	if mustSync, err = syncDictionaries(client, s, config.Dictionaries); err != nil {
+		return fmt.Errorf("Error syncing Dictionaries: %s", err)
+	}
+
 	debugPrint("Syncing conditions\n")
 	if err := syncConditions(client, s, config.Conditions); err != nil {
 		return fmt.Errorf("Error syncing conditions: %s", err)
@@ -713,22 +720,11 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return fmt.Errorf("Error syncing VCLs: %s", err)
 	}
 
-	//remoteDictionaries, err := client.ListDictionaries(&fastly.ListDictionariesInput{Service: s.ID, Version: activeVersion})
-	//if err != nil {
-	//	return err
-	//}
-	//if !(len(config.Dictionaries) == 0 && len(remoteDictionaries) == 0) {
-	var mustSync bool
-	debugPrint("Syncing Dictionaries\n")
-	if mustSync, err = syncDictionaries(client, s, config.Dictionaries); err != nil {
-		return fmt.Errorf("Error syncing Dictionaries: %s", err)
-	}
-	//}
-
 	debugPrint("Syncing directors\n")
 	if err := syncDirectors(client, s, config.Directors); err != nil {
 		return fmt.Errorf("Error syncing directors: %s", err)
 	}
+
 	// Syncing directors will initially delete all directors, which implicitly
 	// deletes all of the directorbackend mappings. As such, we must recreate.
 	debugPrint("Syncing director backends\n")
