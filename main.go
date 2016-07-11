@@ -58,7 +58,7 @@ func main() {
 			Name:      "sync",
 			Aliases:   []string{"s"},
 			Usage:     "Sync remote service configuration with local config file.",
-			ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>]",
+			ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>)...",
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:  "all, a",
@@ -103,12 +103,12 @@ func main() {
 					Name:      "list",
 					Usage:     "List versions associated with a given service",
 					Action:    versionList,
-					ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>]",
+					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>)",
 				},
 				cli.Command{
 					Name:      "validate",
 					Usage:     "Validate a specified VERSION",
-					ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>] [<VERSION>]",
+					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <VERSION>",
 					Action:    versionValidate,
 					Before: func(c *cli.Context) error {
 						if _, err := strconv.Atoi(c.Args().Get(1)); err != nil {
@@ -120,7 +120,7 @@ func main() {
 				cli.Command{
 					Name:      "activate",
 					Usage:     "Activate a specified VERSION",
-					ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>] [<VERSION>]",
+					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <VERSION>",
 					Action:    versionActivate,
 					Before: func(c *cli.Context) error {
 						if err := checkInteractive(c); err != nil {
@@ -170,25 +170,25 @@ func main() {
 					Name:      "list",
 					Usage:     "List dictionaries associated with a given service",
 					Action:    dictionaryList,
-					ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>]",
+					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>)",
 				},
 				cli.Command{
 					Name:      "item-add",
 					Usage:     "Add an item to a dictionary",
 					Action:    dictionaryAddItem,
-					ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>] <DICTIONARY_NAME> <ITEM_KEY> <ITEM_VALUE>",
+					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <DICTIONARY_NAME> <ITEM_KEY> <ITEM_VALUE>",
 				},
 				cli.Command{
 					Name:      "item-rm",
 					Usage:     "Remove an item from a dictionary",
 					Action:    dictionaryRemoveItem,
-					ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>] <DICTIONARY_NAME> <ITEM_KEY>",
+					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <DICTIONARY_NAME> <ITEM_KEY>",
 				},
 				cli.Command{
 					Name:      "item-ls",
 					Usage:     "List items in a dictionary",
 					Action:    dictionaryListItems,
-					ArgsUsage: "[<SERVICE_NAME>|<SERVICE_ID>] <DICTIONARY_NAME>",
+					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <DICTIONARY_NAME>",
 				},
 			},
 		},
