@@ -572,136 +572,64 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 
 	// Conditions, health checks, and cache settings must be sync'd first, as if they're
 	// referenced in any other object the API will balk if they don't exist.
-	remoteConditions, err := client.ListConditions(&fastly.ListConditionsInput{Service: s.ID, Version: activeVersion})
-	if err != nil {
-		return err
-	}
-	if !(len(config.Conditions) == 0 && len(remoteConditions) == 0) {
-		debugPrint("Syncing conditions\n")
-		if err := syncConditions(client, s, config.Conditions); err != nil {
-			return fmt.Errorf("Error syncing conditions: %s", err)
-		}
+	debugPrint("Syncing conditions\n")
+	if err := syncConditions(client, s, config.Conditions); err != nil {
+		return fmt.Errorf("Error syncing conditions: %s", err)
 	}
 
-	remoteHealthChecks, err := client.ListHealthChecks(&fastly.ListHealthChecksInput{Service: s.ID, Version: activeVersion})
-	if err != nil {
-		return err
-	}
-	if !(len(config.HealthChecks) == 0 && len(remoteHealthChecks) == 0) {
-		debugPrint("Syncing health checks\n")
-		if err := syncHealthChecks(client, s, config.HealthChecks); err != nil {
-			return fmt.Errorf("Error syncing health checks: %s", err)
-		}
+	debugPrint("Syncing health checks\n")
+	if err := syncHealthChecks(client, s, config.HealthChecks); err != nil {
+		return fmt.Errorf("Error syncing health checks: %s", err)
 	}
 
-	remoteCacheSettings, err := client.ListCacheSettings(&fastly.ListCacheSettingsInput{Service: s.ID, Version: activeVersion})
-	if err != nil {
-		return err
-	}
-	if !(len(config.CacheSettings) == 0 && len(remoteCacheSettings) == 0) {
-		debugPrint("Syncing health checks\n")
-		if err := syncCacheSettings(client, s, config.CacheSettings); err != nil {
-			return fmt.Errorf("Error syncing cache settings: %s", err)
-		}
+	debugPrint("Syncing cache settings\n")
+	if err := syncCacheSettings(client, s, config.CacheSettings); err != nil {
+		return fmt.Errorf("Error syncing cache settings: %s", err)
 	}
 
-	remoteBackends, err := client.ListBackends(&fastly.ListBackendsInput{Service: s.ID, Version: activeVersion})
-	if err != nil {
-		return err
-	}
-	if !(len(config.Backends) == 0 && len(remoteBackends) == 0) {
-		debugPrint("Syncing backends\n")
-		if err := syncBackends(client, s, config.Backends); err != nil {
-			return fmt.Errorf("Error syncing backends: %s", err)
-		}
+	debugPrint("Syncing backends\n")
+	if err := syncBackends(client, s, config.Backends); err != nil {
+		return fmt.Errorf("Error syncing backends: %s", err)
 	}
 
-	remoteHeaders, err := client.ListHeaders(&fastly.ListHeadersInput{Service: s.ID, Version: activeVersion})
-	if err != nil {
-		return err
-	}
-	if !(len(config.Headers) == 0 && len(remoteHeaders) == 0) {
-		debugPrint("Syncing headers\n")
-		if err := syncHeaders(client, s, config.Headers); err != nil {
-			return fmt.Errorf("Error syncing headers: %s", err)
-		}
+	debugPrint("Syncing headers\n")
+	if err := syncHeaders(client, s, config.Headers); err != nil {
+		return fmt.Errorf("Error syncing headers: %s", err)
 	}
 
-	remoteSyslogs, err := client.ListSyslogs(&fastly.ListSyslogsInput{Service: s.ID, Version: activeVersion})
-	if err != nil {
-		return err
-	}
-	if !(len(config.Syslogs) == 0 && len(remoteSyslogs) == 0) {
-		debugPrint("Syncing syslogs\n")
-		if err := syncSyslogs(client, s, config.Syslogs); err != nil {
-			return fmt.Errorf("Error syncing syslogs: %s", err)
-		}
+	debugPrint("Syncing syslogs\n")
+	if err := syncSyslogs(client, s, config.Syslogs); err != nil {
+		return fmt.Errorf("Error syncing syslogs: %s", err)
 	}
 
-	remotePapertrails, err := client.ListPapertrails(&fastly.ListPapertrailsInput{Service: s.ID, Version: activeVersion})
-	if err != nil {
-		return err
-	}
-	if !(len(config.Papertrails) == 0 && len(remotePapertrails) == 0) {
-		debugPrint("Syncing papertrails\n")
-		if err := syncPapertrails(client, s, config.Papertrails); err != nil {
-			return fmt.Errorf("Error syncing papertrail: %s", err)
-		}
+	debugPrint("Syncing papertrails\n")
+	if err := syncPapertrails(client, s, config.Papertrails); err != nil {
+		return fmt.Errorf("Error syncing papertrail: %s", err)
 	}
 
-	remoteSumologics, err := client.ListSumologics(&fastly.ListSumologicsInput{Service: s.ID, Version: activeVersion})
-	if err != nil {
-		return err
-	}
-	if !(len(config.Sumologics) == 0 && len(remoteSumologics) == 0) {
-		debugPrint("Syncing sumologics\n")
-		if err := syncSumologics(client, s, config.Sumologics); err != nil {
-			return fmt.Errorf("Error syncing sumologics: %s", err)
-		}
+	debugPrint("Syncing sumologics\n")
+	if err := syncSumologics(client, s, config.Sumologics); err != nil {
+		return fmt.Errorf("Error syncing sumologics: %s", err)
 	}
 
-	remoteFTPs, err := client.ListFTPs(&fastly.ListFTPsInput{Service: s.ID, Version: activeVersion})
-	if err != nil {
-		return err
-	}
-	if !(len(config.FTPs) == 0 && len(remoteFTPs) == 0) {
-		debugPrint("Syncing ftps\n")
-		if err := syncFTPs(client, s, config.FTPs); err != nil {
-			return fmt.Errorf("Error syncing ftps: %s", err)
-		}
+	debugPrint("Syncing ftps\n")
+	if err := syncFTPs(client, s, config.FTPs); err != nil {
+		return fmt.Errorf("Error syncing ftps: %s", err)
 	}
 
-	remoteGCSs, err := client.ListGCSs(&fastly.ListGCSsInput{Service: s.ID, Version: activeVersion})
-	if err != nil {
+	debugPrint("Syncing GCSs\n")
+	if err := syncGCSs(client, s, config.GCSs); err != nil {
 		return err
-	}
-	if !(len(config.GCSs) == 0 && len(remoteGCSs) == 0) {
-		debugPrint("Syncing GCSs\n")
-		if err := syncGCSs(client, s, config.GCSs); err != nil {
-			return err
-		}
 	}
 
-	remoteS3s, err := client.ListS3s(&fastly.ListS3sInput{Service: s.ID, Version: activeVersion})
-	if err != nil {
-		return err
-	}
-	if !(len(config.S3s) == 0 && len(remoteS3s) == 0) {
-		debugPrint("Syncing S3s\n")
-		if err := syncS3s(client, s, config.S3s); err != nil {
-			return fmt.Errorf("Error syncing s3s: %s", err)
-		}
+	debugPrint("Syncing S3s\n")
+	if err := syncS3s(client, s, config.S3s); err != nil {
+		return fmt.Errorf("Error syncing s3s: %s", err)
 	}
 
-	remoteDomains, err := client.ListDomains(&fastly.ListDomainsInput{Service: s.ID, Version: activeVersion})
-	if err != nil {
-		return err
-	}
-	if !(len(config.Domains) == 0 && len(remoteDomains) == 0) {
-		debugPrint("Syncing domains\n")
-		if err := syncDomains(client, s, config.Domains); err != nil {
-			return fmt.Errorf("Error syncing domains: %s", err)
-		}
+	debugPrint("Syncing domains\n")
+	if err := syncDomains(client, s, config.Domains); err != nil {
+		return fmt.Errorf("Error syncing domains: %s", err)
 	}
 
 	debugPrint("Syncing settings\n")
@@ -709,53 +637,25 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 		return fmt.Errorf("Error syncing settings: %s", err)
 	}
 
-	remoteGzips, err := client.ListGzips(&fastly.ListGzipsInput{Service: s.ID, Version: activeVersion})
-	if err != nil {
-		return err
-	}
-	if !(len(config.Gzips) == 0 && len(remoteGzips) == 0) {
-		debugPrint("Syncing gzips\n")
-		if err := syncGzips(client, s, config.Gzips); err != nil {
-			return fmt.Errorf("Error syncing gzips: %s", err)
-		}
+	debugPrint("Syncing gzips\n")
+	if err := syncGzips(client, s, config.Gzips); err != nil {
+		return fmt.Errorf("Error syncing gzips: %s", err)
 	}
 
-	remoteVCLs, err := client.ListVCLs(&fastly.ListVCLsInput{Service: s.ID, Version: activeVersion})
-	if err != nil {
-		return err
-	}
-	if !(len(config.VCLs) == 0 && len(remoteVCLs) == 0) {
-		debugPrint("Syncing VCLs\n")
-		if err := syncVCLs(client, s, config.VCLs); err != nil {
-			return fmt.Errorf("Error syncing VCLs: %s", err)
-		}
+	debugPrint("Syncing VCLs\n")
+	if err := syncVCLs(client, s, config.VCLs); err != nil {
+		return fmt.Errorf("Error syncing VCLs: %s", err)
 	}
 
-	remoteDirectors, err := client.ListDirectors(&fastly.ListDirectorsInput{Service: s.ID, Version: activeVersion})
-	if err != nil {
-		return err
+	debugPrint("Syncing directors\n")
+	if err := syncDirectors(client, s, config.Directors); err != nil {
+		return fmt.Errorf("Error syncing directors: %s", err)
 	}
-	mappingsInSync := true
-	for _, directorBackend := range config.DirectorBackends {
-		// There is no way to list the DirectorBackend mappings, so we have to fetch
-		// each and look for 404s.
-		resp, err := client.Request("GET", fmt.Sprintf("/service/%s/version/%s/director/%s/backend/%s", s.ID, activeVersion, directorBackend.Director, directorBackend.Backend), nil)
-		if err != nil && resp.StatusCode == 404 {
-			mappingsInSync = false
-		} else if err != nil {
-			return err
-		}
-	}
-	if !(len(config.Directors) == 0 && len(remoteDirectors) == 0) || !mappingsInSync {
-		debugPrint("Syncing directors\n")
-		if err := syncDirectors(client, s, config.Directors); err != nil {
-			return fmt.Errorf("Error syncing directors: %s", err)
-		}
-		// Syncing directors will initially delete all directors, which implicitly
-		// deletes all of the directorbackend mappings. As such, we must recreate.
-		if err := syncDirectorBackends(client, s, config.DirectorBackends); err != nil {
-			return fmt.Errorf("Error syncing director backend mappings: %s", err)
-		}
+	// Syncing directors will initially delete all directors, which implicitly
+	// deletes all of the directorbackend mappings. As such, we must recreate.
+	debugPrint("Syncing director backends\n")
+	if err := syncDirectorBackends(client, s, config.DirectorBackends); err != nil {
+		return fmt.Errorf("Error syncing director backend mappings: %s", err)
 	}
 
 	if version, ok := pendingVersions[s.ID]; ok {
