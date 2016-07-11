@@ -561,6 +561,9 @@ func syncDictionaries(client *fastly.Client, s *fastly.Service, newDictionaries 
 		}
 	}
 	for _, d := range newDictionaries {
+		if d == (fastly.CreateDictionaryInput{}) {
+			continue
+		}
 		found := false
 		for _, n := range existingDictionaries {
 			if d.Name == n.Name {
