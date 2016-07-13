@@ -55,18 +55,18 @@ func main() {
 
 	app.Commands = []cli.Command{
 		cli.Command{
-			Name:      "sync",
-			Aliases:   []string{"s"},
-			Usage:     "Sync remote service configuration with local config file.",
+			Name:      "push",
+			Aliases:   []string{"p"},
+			Usage:     "Push locally defined service configuration options to Fastly.",
 			ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>)...",
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:  "all, a",
-					Usage: "Sync all services listed in config file",
+					Usage: "Push all services listed in config file",
 				},
 				cli.BoolFlag{
 					Name:  "noop, n",
-					Usage: "Create new sync'd config versions, but do not activate.",
+					Usage: "Push new config versions, but do not activate.",
 				},
 			},
 			Before: func(c *cli.Context) error {
@@ -77,7 +77,7 @@ func main() {
 					return err
 				}
 				if (!c.Bool("all") && !c.Args().Present()) || (c.Bool("all") && c.Args().Present()) {
-					return cli.NewExitError("Error: either specify service names to be syncd, or sync all with -a", -1)
+					return cli.NewExitError("Error: either specify service names to be pushed, or push all with -a", -1)
 				}
 				debug = c.GlobalBool("debug")
 				return nil
