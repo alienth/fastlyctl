@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io/ioutil"
 	"os"
 	"strconv"
 	"syscall"
@@ -28,6 +29,18 @@ func checkInteractive(c *cli.Context) *cli.ExitError {
 	return nil
 }
 
+func getFastlyKey() string {
+	file := "fastly_key"
+	if _, err := os.Stat(file); err == nil {
+		contents, _ := ioutil.ReadFile(file)
+		if contents[len(contents)-1] == []byte("\n")[0] {
+			contents = contents[:len(contents)-1]
+		}
+		return string(contents)
+	}
+	return ""
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "fastlyctl"
@@ -40,8 +53,9 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:   "fastly-key, K",
-			Usage:  "Fastly API Key.",
+			Usage:  "Fastly API Key. Can be read from 'fastly_key' file in CWD.",
 			EnvVar: "FASTLY_KEY",
+			Value:  getFastlyKey(),
 		},
 		cli.BoolFlag{
 			Name:  "debug, d",
@@ -51,6 +65,13 @@ func main() {
 			Name:  "assume-yes, y",
 			Usage: "Assume 'yes' to all prompts. USE ONLY IF YOU ARE CERTAIN YOUR COMMANDS WON'T BREAK ANYTHING!",
 		},
+	}
+
+	app.Before = func(c *cli.Context) error {
+		if err := checkFastlyKey(c); err != nil {
+			return err
+		}
+		return nil
 	}
 
 	app.Commands = []cli.Command{
@@ -70,9 +91,6 @@ func main() {
 				},
 			},
 			Before: func(c *cli.Context) error {
-				if err := checkFastlyKey(c); err != nil {
-					return err
-				}
 				if err := checkInteractive(c); err != nil {
 					return err
 				}
@@ -89,9 +107,6 @@ func main() {
 			Aliases: []string{"v"},
 			Usage:   "Manage service versions.",
 			Before: func(c *cli.Context) error {
-				if err := checkFastlyKey(c); err != nil {
-					return err
-				}
 				// less than 2 here since the subcommand is the first Arg
 				if len(c.Args()) < 2 {
 					return cli.NewExitError("Please specify service.", -1)
@@ -137,12 +152,6 @@ func main() {
 		cli.Command{
 			Name:  "service",
 			Usage: "Manage services.",
-			Before: func(c *cli.Context) error {
-				if err := checkFastlyKey(c); err != nil {
-					return err
-				}
-				return nil
-			},
 			Subcommands: cli.Commands{
 				cli.Command{
 					Name:   "list",
@@ -156,9 +165,6 @@ func main() {
 			Aliases: []string{"d"},
 			Usage:   "Manage dictionaries.",
 			Before: func(c *cli.Context) error {
-				if err := checkFastlyKey(c); err != nil {
-					return err
-				}
 				// less than 2 here since the subcommand is the first Arg
 				if len(c.Args()) < 2 {
 					return cli.NewExitError("Please specify service.", -1)
