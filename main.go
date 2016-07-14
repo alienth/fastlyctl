@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -9,16 +8,9 @@ import (
 
 	"golang.org/x/crypto/ssh/terminal"
 
+	"github.com/alienth/fastlyctl/log"
 	"github.com/urfave/cli"
 )
-
-var debug bool
-
-func debugPrint(message string) {
-	if debug {
-		fmt.Print(message)
-	}
-}
 
 func checkFastlyKey(c *cli.Context) *cli.ExitError {
 	if c.GlobalString("fastly-key") == "" {
@@ -104,7 +96,9 @@ func main() {
 				if (!c.Bool("all") && !c.Args().Present()) || (c.Bool("all") && c.Args().Present()) {
 					return cli.NewExitError("Error: either specify service names to be pushed, or push all with -a", -1)
 				}
-				debug = c.GlobalBool("debug")
+				if c.GlobalBool("debug") {
+					log.EnableDebug()
+				}
 				return nil
 			},
 			Action: syncConfig,

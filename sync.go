@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/alienth/fastlyctl/log"
 	"github.com/alienth/fastlyctl/util"
 	"github.com/alienth/go-fastly"
 	"github.com/imdario/mergo"
@@ -583,14 +584,14 @@ func syncDictionaries(client *fastly.Client, s *fastly.Service, newDictionaries 
 	var needsSync bool
 	for _, d := range needsCreation {
 		needsSync = true
-		debugPrint(fmt.Sprintf("\t creating dictionary: %s\n", d.Name))
+		log.Debug(fmt.Sprintf("\t creating dictionary: %s\n", d.Name))
 		if _, err = client.CreateDictionary(d); err != nil {
 			return false, err
 		}
 	}
 	for _, d := range needsDeletion {
 		needsSync = true
-		debugPrint(fmt.Sprintf("\t deleting dictionary: %s\n", d.Name))
+		log.Debug(fmt.Sprintf("\t deleting dictionary: %s\n", d.Name))
 		if err = client.DeleteDictionary(d); err != nil {
 			return false, err
 		}
@@ -644,94 +645,94 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 	// sync'd first, as if they're referenced in any other object the API
 	// will balk if they don't exist.
 	var mustSync bool
-	debugPrint("Syncing Dictionaries\n")
+	log.Debug("Syncing Dictionaries\n")
 	if mustSync, err = syncDictionaries(client, s, config.Dictionaries); err != nil {
 		return fmt.Errorf("Error syncing Dictionaries: %s", err)
 	}
 
-	debugPrint("Syncing conditions\n")
+	log.Debug("Syncing conditions\n")
 	if err := syncConditions(client, s, config.Conditions); err != nil {
 		return fmt.Errorf("Error syncing conditions: %s", err)
 	}
 
-	debugPrint("Syncing health checks\n")
+	log.Debug("Syncing health checks\n")
 	if err := syncHealthChecks(client, s, config.HealthChecks); err != nil {
 		return fmt.Errorf("Error syncing health checks: %s", err)
 	}
 
-	debugPrint("Syncing cache settings\n")
+	log.Debug("Syncing cache settings\n")
 	if err := syncCacheSettings(client, s, config.CacheSettings); err != nil {
 		return fmt.Errorf("Error syncing cache settings: %s", err)
 	}
 
-	debugPrint("Syncing backends\n")
+	log.Debug("Syncing backends\n")
 	if err := syncBackends(client, s, config.Backends); err != nil {
 		return fmt.Errorf("Error syncing backends: %s", err)
 	}
 
-	debugPrint("Syncing headers\n")
+	log.Debug("Syncing headers\n")
 	if err := syncHeaders(client, s, config.Headers); err != nil {
 		return fmt.Errorf("Error syncing headers: %s", err)
 	}
 
-	debugPrint("Syncing syslogs\n")
+	log.Debug("Syncing syslogs\n")
 	if err := syncSyslogs(client, s, config.Syslogs); err != nil {
 		return fmt.Errorf("Error syncing syslogs: %s", err)
 	}
 
-	debugPrint("Syncing papertrails\n")
+	log.Debug("Syncing papertrails\n")
 	if err := syncPapertrails(client, s, config.Papertrails); err != nil {
 		return fmt.Errorf("Error syncing papertrail: %s", err)
 	}
 
-	debugPrint("Syncing sumologics\n")
+	log.Debug("Syncing sumologics\n")
 	if err := syncSumologics(client, s, config.Sumologics); err != nil {
 		return fmt.Errorf("Error syncing sumologics: %s", err)
 	}
 
-	debugPrint("Syncing ftps\n")
+	log.Debug("Syncing ftps\n")
 	if err := syncFTPs(client, s, config.FTPs); err != nil {
 		return fmt.Errorf("Error syncing ftps: %s", err)
 	}
 
-	debugPrint("Syncing GCSs\n")
+	log.Debug("Syncing GCSs\n")
 	if err := syncGCSs(client, s, config.GCSs); err != nil {
 		return err
 	}
 
-	debugPrint("Syncing S3s\n")
+	log.Debug("Syncing S3s\n")
 	if err := syncS3s(client, s, config.S3s); err != nil {
 		return fmt.Errorf("Error syncing s3s: %s", err)
 	}
 
-	debugPrint("Syncing domains\n")
+	log.Debug("Syncing domains\n")
 	if err := syncDomains(client, s, config.Domains); err != nil {
 		return fmt.Errorf("Error syncing domains: %s", err)
 	}
 
-	debugPrint("Syncing settings\n")
+	log.Debug("Syncing settings\n")
 	if err := syncSettings(client, s, config.Settings); err != nil {
 		return fmt.Errorf("Error syncing settings: %s", err)
 	}
 
-	debugPrint("Syncing gzips\n")
+	log.Debug("Syncing gzips\n")
 	if err := syncGzips(client, s, config.Gzips); err != nil {
 		return fmt.Errorf("Error syncing gzips: %s", err)
 	}
 
-	debugPrint("Syncing VCLs\n")
+	log.Debug("Syncing VCLs\n")
 	if err := syncVCLs(client, s, config.VCLs); err != nil {
 		return fmt.Errorf("Error syncing VCLs: %s", err)
 	}
 
-	debugPrint("Syncing directors\n")
+	log.Debug("Syncing directors\n")
 	if err := syncDirectors(client, s, config.Directors); err != nil {
 		return fmt.Errorf("Error syncing directors: %s", err)
 	}
 
 	// Syncing directors will initially delete all directors, which implicitly
 	// deletes all of the directorbackend mappings. As such, we must recreate.
-	debugPrint("Syncing director backends\n")
+	log.Debug("Syncing director backends\n")
 	if err := syncDirectorBackends(client, s, config.DirectorBackends); err != nil {
 		return fmt.Errorf("Error syncing director backend mappings: %s", err)
 	}
