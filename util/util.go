@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
@@ -181,4 +182,32 @@ func GetPager() *exec.Cmd {
 		}
 	}
 	return nil
+}
+
+func CheckFastlyKey(c *cli.Context) *cli.ExitError {
+	if c.GlobalString("fastly-key") == "" {
+		return cli.NewExitError("Error: Fastly API key must be set.", -1)
+	}
+	return nil
+}
+
+func CheckInteractive(c *cli.Context) *cli.ExitError {
+	interactive := terminal.IsTerminal(syscall.Stdin)
+	if !interactive && !c.GlobalBool("assume-yes") {
+		return cli.NewExitError("In non-interactive shell and --assume-yes not used, exiting.", -1)
+
+	}
+	return nil
+}
+
+func GetFastlyKey() string {
+	file := "fastly_key"
+	if _, err := os.Stat(file); err == nil {
+		contents, _ := ioutil.ReadFile(file)
+		if contents[len(contents)-1] == []byte("\n")[0] {
+			contents = contents[:len(contents)-1]
+		}
+		return string(contents)
+	}
+	return ""
 }

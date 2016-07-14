@@ -1,44 +1,13 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"strconv"
-	"syscall"
-
-	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/alienth/fastlyctl/log"
+	"github.com/alienth/fastlyctl/util"
 	"github.com/urfave/cli"
 )
-
-func checkFastlyKey(c *cli.Context) *cli.ExitError {
-	if c.GlobalString("fastly-key") == "" {
-		return cli.NewExitError("Error: Fastly API key must be set.", -1)
-	}
-	return nil
-}
-
-func checkInteractive(c *cli.Context) *cli.ExitError {
-	interactive := terminal.IsTerminal(syscall.Stdin)
-	if !interactive && !c.GlobalBool("assume-yes") {
-		return cli.NewExitError("In non-interactive shell and --assume-yes not used, exiting.", -1)
-
-	}
-	return nil
-}
-
-func getFastlyKey() string {
-	file := "fastly_key"
-	if _, err := os.Stat(file); err == nil {
-		contents, _ := ioutil.ReadFile(file)
-		if contents[len(contents)-1] == []byte("\n")[0] {
-			contents = contents[:len(contents)-1]
-		}
-		return string(contents)
-	}
-	return ""
-}
 
 func main() {
 	app := cli.NewApp()
@@ -54,7 +23,7 @@ func main() {
 			Name:   "fastly-key, K",
 			Usage:  "Fastly API Key. Can be read from 'fastly_key' file in CWD.",
 			EnvVar: "FASTLY_KEY",
-			Value:  getFastlyKey(),
+			Value:  util.GetFastlyKey(),
 		},
 		cli.BoolFlag{
 			Name:  "debug, d",
@@ -67,7 +36,7 @@ func main() {
 	}
 
 	app.Before = func(c *cli.Context) error {
-		if err := checkFastlyKey(c); err != nil {
+		if err := util.CheckFastlyKey(c); err != nil {
 			return err
 		}
 		return nil
@@ -90,7 +59,7 @@ func main() {
 				},
 			},
 			Before: func(c *cli.Context) error {
-				if err := checkInteractive(c); err != nil {
+				if err := util.CheckInteractive(c); err != nil {
 					return err
 				}
 				if (!c.Bool("all") && !c.Args().Present()) || (c.Bool("all") && c.Args().Present()) {
@@ -139,7 +108,7 @@ func main() {
 					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <VERSION>",
 					Action:    versionActivate,
 					Before: func(c *cli.Context) error {
-						if err := checkInteractive(c); err != nil {
+						if err := util.CheckInteractive(c); err != nil {
 							return err
 						}
 						if _, err := strconv.Atoi(c.Args().Get(1)); err != nil {
