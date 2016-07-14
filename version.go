@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/alienth/fastlyctl/util"
 	"github.com/alienth/go-fastly"
 	"github.com/urfave/cli"
 )
@@ -14,7 +15,7 @@ func versionList(c *cli.Context) error {
 	}
 	serviceParam := c.Args().Get(0)
 	var service *fastly.Service
-	if service, err = getServiceByNameOrID(client, serviceParam); err != nil {
+	if service, err = util.GetServiceByNameOrID(client, serviceParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 	fmt.Printf("Versions for %s:\n\n", service.Name)
@@ -38,10 +39,10 @@ func versionValidate(c *cli.Context) error {
 	serviceParam := c.Args().Get(0)
 	version := c.Args().Get(1)
 	var service *fastly.Service
-	if service, err = getServiceByNameOrID(client, serviceParam); err != nil {
+	if service, err = util.GetServiceByNameOrID(client, serviceParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
-	if err := validateVersion(client, service, version); err != nil {
+	if err := util.ValidateVersion(client, service, version); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 
@@ -56,14 +57,14 @@ func versionActivate(c *cli.Context) error {
 	serviceParam := c.Args().Get(0)
 	versionNumber := c.Args().Get(1)
 	var service *fastly.Service
-	if service, err = getServiceByNameOrID(client, serviceParam); err != nil {
+	if service, err = util.GetServiceByNameOrID(client, serviceParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 	var version *fastly.Version
 	if version, err = client.GetVersion(&fastly.GetVersionInput{Service: service.ID, Version: versionNumber}); err != nil {
 		return cli.NewExitError(fmt.Sprintf("Error fetching version: %s", err), -1)
 	}
-	if err = activateVersion(c, client, service, version); err != nil {
+	if err = util.ActivateVersion(c, client, service, version); err != nil {
 		return cli.NewExitError(fmt.Sprintf("Error activating version: %s", err), -1)
 	}
 

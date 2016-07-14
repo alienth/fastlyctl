@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-func getServiceByNameOrID(client *fastly.Client, identifier string) (*fastly.Service, error) {
+func GetServiceByNameOrID(client *fastly.Client, identifier string) (*fastly.Service, error) {
 	var service *fastly.Service
 	service, err := client.SearchService(&fastly.SearchServiceInput{Name: identifier})
 	if err != nil {
@@ -27,7 +27,7 @@ func getServiceByNameOrID(client *fastly.Client, identifier string) (*fastly.Ser
 
 // getActiveVersion takes in a *fastly.Service and spits out the config version
 // that is currently active for that service.
-func getActiveVersion(service *fastly.Service) (string, error) {
+func GetActiveVersion(service *fastly.Service) (string, error) {
 	// Depending on how the service was fetched, it may or may not
 	// have a filled ActiveVersion field.
 	if service.ActiveVersion != 0 {
@@ -42,7 +42,7 @@ func getActiveVersion(service *fastly.Service) (string, error) {
 	return "", fmt.Errorf("Unable to find the active version for service %s", service.Name)
 }
 
-func prompt(question string) (bool, error) {
+func Prompt(question string) (bool, error) {
 	var input string
 	for {
 		fmt.Printf("%s (y/n): ", question)
@@ -59,14 +59,14 @@ func prompt(question string) (bool, error) {
 	}
 }
 
-func countChanges(diff *string) (int, int) {
+func CountChanges(diff *string) (int, int) {
 	removals := regexp.MustCompile(`(^|\n)\-`)
 	additions := regexp.MustCompile(`(^|\n)\+`)
 	return len(additions.FindAllString(*diff, -1)), len(removals.FindAllString(*diff, -1))
 }
 
-func activateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v *fastly.Version) error {
-	activeVersion, err := getActiveVersion(s)
+func ActivateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v *fastly.Version) error {
+	activeVersion, err := GetActiveVersion(s)
 	if err != nil {
 		return err
 	}
@@ -77,12 +77,12 @@ func activateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v
 	}
 
 	interactive := terminal.IsTerminal(syscall.Stdin)
-	pager := getPager()
+	pager := GetPager()
 
-	additions, removals := countChanges(&diff.Diff)
+	additions, removals := CountChanges(&diff.Diff)
 	var proceed bool
 	if !assumeYes {
-		if proceed, err = prompt(fmt.Sprintf("%d additions and %d removals in diff. View?", additions, removals)); err != nil {
+		if proceed, err = Prompt(fmt.Sprintf("%d additions and %d removals in diff. View?", additions, removals)); err != nil {
 			return err
 		}
 	}
@@ -110,7 +110,7 @@ func activateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v
 	}
 
 	if !assumeYes {
-		if proceed, err = prompt("Activate version " + v.Number + " for service " + s.Name + "?"); err != nil {
+		if proceed, err = Prompt("Activate version " + v.Number + " for service " + s.Name + "?"); err != nil {
 			return err
 		}
 	}
@@ -125,7 +125,7 @@ func activateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v
 
 // validateVersion takes in a service and version number and returns an
 // error if the version is invalid.
-func validateVersion(client *fastly.Client, service *fastly.Service, version string) error {
+func ValidateVersion(client *fastly.Client, service *fastly.Service, version string) error {
 	result, msg, err := client.ValidateVersion(&fastly.ValidateVersionInput{Service: service.ID, Version: version})
 	if err != nil {
 		return fmt.Errorf("Error validating version: %s", err)
@@ -145,7 +145,7 @@ func validateVersion(client *fastly.Client, service *fastly.Service, version str
 // comparing a version with itself, and then generating a diff between the from
 // and to versions.  If the two diffs are identical, then there is no
 // difference between from and to.
-func versionsEqual(c *fastly.Client, s *fastly.Service, from string, to string) (bool, error) {
+func VersionsEqual(c *fastly.Client, s *fastly.Service, from string, to string) (bool, error) {
 	var i fastly.GetDiffInput
 	i.Service = s.ID
 	// Intentional
@@ -163,7 +163,7 @@ func versionsEqual(c *fastly.Client, s *fastly.Service, from string, to string) 
 	return noDiff.Diff == diff.Diff, nil
 }
 
-func stringInSlice(check string, slice []string) bool {
+func StringInSlice(check string, slice []string) bool {
 	for _, element := range slice {
 		if element == check {
 			return true
@@ -172,7 +172,7 @@ func stringInSlice(check string, slice []string) bool {
 	return false
 }
 
-func getPager() *exec.Cmd {
+func GetPager() *exec.Cmd {
 	for _, pager := range [3]string{os.Getenv("PAGER"), "pager", "less"} {
 		// we expect some NotFounds, so ignore errors
 		path, _ := exec.LookPath(pager)
@@ -181,10 +181,4 @@ func getPager() *exec.Cmd {
 		}
 	}
 	return nil
-}
-
-func debugPrint(message string) {
-	if debug {
-		fmt.Print(message)
-	}
 }

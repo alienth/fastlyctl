@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/alienth/fastlyctl/util"
 	"github.com/alienth/go-fastly"
 	"github.com/imdario/mergo"
 	"github.com/urfave/cli"
@@ -628,7 +629,7 @@ func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []fastly
 }
 
 func syncService(client *fastly.Client, s *fastly.Service) error {
-	activeVersion, err := getActiveVersion(s)
+	activeVersion, err := util.GetActiveVersion(s)
 	if err != nil {
 		return err
 	}
@@ -736,7 +737,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 	}
 
 	if version, ok := pendingVersions[s.ID]; ok {
-		equal, err := versionsEqual(client, s, activeVersion, version.Number)
+		equal, err := util.VersionsEqual(client, s, activeVersion, version.Number)
 		if err != nil {
 			return err
 		}
@@ -778,7 +779,7 @@ func syncConfig(c *cli.Context) error {
 		if _, ok := siteConfigs[s.Name]; !ok {
 			continue
 		}
-		if !c.Bool("all") && !stringInSlice(s.Name, c.Args()) {
+		if !c.Bool("all") && !util.StringInSlice(s.Name, c.Args()) {
 			continue
 		}
 		foundService = true
@@ -787,11 +788,11 @@ func syncConfig(c *cli.Context) error {
 			return cli.NewExitError(fmt.Sprintf("Error syncing service config for %s: %s", s.Name, err), -1)
 		}
 		if version, ok := pendingVersions[s.ID]; ok {
-			if err = validateVersion(client, s, version.Number); err != nil {
+			if err = util.ValidateVersion(client, s, version.Number); err != nil {
 				return cli.NewExitError(err.Error(), -1)
 			}
 			if !noop {
-				if err = activateVersion(c, client, s, &version); err != nil {
+				if err = util.ActivateVersion(c, client, s, &version); err != nil {
 					return cli.NewExitError(fmt.Sprintf("Error activating pending version %s for service %s: %s", version.Number, s.Name, err), -1)
 				}
 			}

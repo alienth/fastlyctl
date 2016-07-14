@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/alienth/fastlyctl/util"
 	"github.com/alienth/go-fastly"
 	"github.com/urfave/cli"
 )
@@ -15,10 +16,10 @@ func dictionaryList(c *cli.Context) error {
 
 	serviceParam := c.Args().Get(0)
 	var service *fastly.Service
-	if service, err = getServiceByNameOrID(client, serviceParam); err != nil {
+	if service, err = util.GetServiceByNameOrID(client, serviceParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
-	activeVersion, err := getActiveVersion(service)
+	activeVersion, err := util.GetActiveVersion(service)
 	if err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
@@ -45,10 +46,10 @@ func dictionaryAddItem(c *cli.Context) error {
 	keyParam := c.Args().Get(2)
 	valueParam := c.Args().Get(3)
 	var service *fastly.Service
-	if service, err = getServiceByNameOrID(client, serviceParam); err != nil {
+	if service, err = util.GetServiceByNameOrID(client, serviceParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
-	activeVersion, err := getActiveVersion(service)
+	activeVersion, err := util.GetActiveVersion(service)
 	if err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
@@ -80,10 +81,10 @@ func dictionaryRemoveItem(c *cli.Context) error {
 	dictParam := c.Args().Get(1)
 	keyParam := c.Args().Get(2)
 	var service *fastly.Service
-	if service, err = getServiceByNameOrID(client, serviceParam); err != nil {
+	if service, err = util.GetServiceByNameOrID(client, serviceParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
-	activeVersion, err := getActiveVersion(service)
+	activeVersion, err := util.GetActiveVersion(service)
 	if err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
@@ -113,10 +114,10 @@ func dictionaryListItems(c *cli.Context) error {
 	serviceParam := c.Args().Get(0)
 	dictParam := c.Args().Get(1)
 	var service *fastly.Service
-	if service, err = getServiceByNameOrID(client, serviceParam); err != nil {
+	if service, err = util.GetServiceByNameOrID(client, serviceParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
-	activeVersion, err := getActiveVersion(service)
+	activeVersion, err := util.GetActiveVersion(service)
 	if err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -12,6 +13,12 @@ import (
 )
 
 var debug bool
+
+func debugPrint(message string) {
+	if debug {
+		fmt.Print(message)
+	}
+}
 
 func checkFastlyKey(c *cli.Context) *cli.ExitError {
 	if c.GlobalString("fastly-key") == "" {
