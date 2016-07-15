@@ -1,6 +1,7 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -8,12 +9,12 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
-	"syscall"
 
 	"github.com/alienth/go-fastly"
 	"github.com/urfave/cli"
-	"golang.org/x/crypto/ssh/terminal"
 )
+
+var ErrNonInteractive = errors.New("In non-interactive shell and --assume-yes not used.")
 
 func GetServiceByNameOrID(client *fastly.Client, identifier string) (*fastly.Service, error) {
 	var service *fastly.Service
@@ -77,7 +78,10 @@ func ActivateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v
 		return err
 	}
 
-	interactive := terminal.IsTerminal(syscall.Stdin)
+	interactive := IsInteractive()
+	if !interactive && !assumeYes {
+		return cli.NewExitError(ErrNonInteractive.Error(), -1)
+	}
 	pager := GetPager()
 
 	additions, removals := CountChanges(&diff.Diff)
@@ -187,15 +191,6 @@ func GetPager() *exec.Cmd {
 func CheckFastlyKey(c *cli.Context) *cli.ExitError {
 	if c.GlobalString("fastly-key") == "" {
 		return cli.NewExitError("Error: Fastly API key must be set.", -1)
-	}
-	return nil
-}
-
-func CheckInteractive(c *cli.Context) *cli.ExitError {
-	interactive := terminal.IsTerminal(syscall.Stdin)
-	if !interactive && !c.GlobalBool("assume-yes") {
-		return cli.NewExitError("In non-interactive shell and --assume-yes not used, exiting.", -1)
-
 	}
 	return nil
 }

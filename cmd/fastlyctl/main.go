@@ -59,8 +59,8 @@ func main() {
 				},
 			},
 			Before: func(c *cli.Context) error {
-				if err := util.CheckInteractive(c); err != nil {
-					return err
+				if !util.IsInteractive() {
+					return cli.NewExitError(util.ErrNonInteractive.Error(), -1)
 				}
 				if (!c.Bool("all") && !c.Args().Present()) || (c.Bool("all") && c.Args().Present()) {
 					return cli.NewExitError("Error: either specify service names to be pushed, or push all with -a", -1)
@@ -108,8 +108,8 @@ func main() {
 					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <VERSION>",
 					Action:    versionActivate,
 					Before: func(c *cli.Context) error {
-						if err := util.CheckInteractive(c); err != nil {
-							return err
+						if !util.IsInteractive() {
+							return cli.NewExitError(util.ErrNonInteractive.Error(), -1)
 						}
 						if _, err := strconv.Atoi(c.Args().Get(1)); err != nil {
 							return cli.NewExitError("Please specify version to activate.", -1)
