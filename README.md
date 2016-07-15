@@ -1,7 +1,7 @@
 # fastlyctl
 
 fastlyctl is a utility which can be used to interact with and manage your Fastly
-service configuration. The most notable subcommand of fastlyctl is `sync`, which
+service configuration. The most notable subcommand of fastlyctl is `push`, which
 can be used to synchronize Fastly settings with definitions in a local config
 file.
 
@@ -10,24 +10,24 @@ environment, so please use extreme caution.
 
 ## Commands
 
-### sync
+### push
 
-Use to synchronize remote service configurations with settings defined in a
-local config file.
+Use to push remote service configurations with settings defined in a local
+config file.
 
 By default, will read `config.toml` in CWD. You can specify alternate files
 names with the `-c` flag. Can take in either json or toml files. The suffix of
 the file must be either `json` or `toml`.
 
-The `sync` command will by default prompt to activate any changes made to a
-service. `sync` can be made to automatically apply changes with the `-y` flag.
+The `push` command will by default prompt to activate any changes made to a
+service. `push` can be made to automatically apply changes with the `-y` flag.
 Example usage:
 
 ```
-fastlyctl sync SomeServiceName
+fastlyctl push SomeServiceName
 ```
 
-For further info, run `fastlyctl sync -h`.
+For further info, run `fastlyctl push -h`.
 
 #### config file
 
