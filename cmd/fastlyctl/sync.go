@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 
@@ -46,6 +47,9 @@ type SiteConfig struct {
 
 	IPPrefix string
 	IPSuffix string
+
+	S3AccessKey string
+	S3SecretKey string
 }
 
 type VCL struct {
@@ -429,6 +433,15 @@ func syncS3s(client *fastly.Client, s *fastly.Service, newS3s []fastly.CreateS3I
 		return err
 	}
 
+	accessKey := os.Getenv("FASTLY_S3_ACCESS_KEY")
+	secretKey := os.Getenv("FASTLY_S3_SECRET_KEY")
+	if accessKey == "" {
+		accessKey = siteConfigs[s.Name].S3AccessKey
+	}
+	if secretKey == "" {
+		secretKey = siteConfigs[s.Name].S3SecretKey
+	}
+
 	existingS3s, err := client.ListS3s(&fastly.ListS3sInput{Service: s.ID, Version: newversion.Number})
 	for _, s3 := range existingS3s {
 		err := client.DeleteS3(&fastly.DeleteS3Input{Service: s.ID, Name: s3.Name, Version: newversion.Number})
@@ -436,7 +449,7 @@ func syncS3s(client *fastly.Client, s *fastly.Service, newS3s []fastly.CreateS3I
 			return err
 		}
 	}
-	r := strings.NewReplacer("_servicename_", s.Name)
+	r := strings.NewReplacer("_servicename_", s.Name, "_s3accesskey_", accessKey, "_s3secretkey_", secretKey)
 	for _, s3 := range newS3s {
 		s3.Service = s.ID
 		s3.Version = newversion.Number
