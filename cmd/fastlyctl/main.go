@@ -59,7 +59,7 @@ func main() {
 				},
 			},
 			Before: func(c *cli.Context) error {
-				if !util.IsInteractive() {
+				if !util.IsInteractive() && !c.GlobalBool("assume-yes") {
 					return cli.NewExitError(util.ErrNonInteractive.Error(), -1)
 				}
 				if (!c.Bool("all") && !c.Args().Present()) || (c.Bool("all") && c.Args().Present()) {
@@ -108,7 +108,7 @@ func main() {
 					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <VERSION>",
 					Action:    versionActivate,
 					Before: func(c *cli.Context) error {
-						if !util.IsInteractive() {
+						if !util.IsInteractive() && !c.GlobalBool("assume-yes") {
 							return cli.NewExitError(util.ErrNonInteractive.Error(), -1)
 						}
 						if _, err := strconv.Atoi(c.Args().Get(1)); err != nil {
