@@ -39,6 +39,14 @@ var ErrMissingDictionary = errors.New("Missing required field 'Dictionary'")
 // requires a "ItemKey" key, but one was not set.
 var ErrMissingItemKey = errors.New("Missing required field 'ItemKey'")
 
+// ErrMissingACL is an error that is returned when an input struct
+// requires a "ACL" key, but one was not set.
+var ErrMissingACL = errors.New("Missing required field 'ACL'")
+
+// ErrMissingACLEntryID is an error that is returned when an input struct
+// requires a "ID" key, but one was not set.
+var ErrMissingACLEntryID = errors.New("Missing required field 'ID'")
+
 // ErrMissingFrom is an error that is returned when an input struct
 // requires a "From" key, but one was not set.
 var ErrMissingFrom = errors.New("Missing required field 'From'")

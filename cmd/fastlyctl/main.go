@@ -168,6 +168,44 @@ func main() {
 				},
 			},
 		},
+		cli.Command{
+			Name:  "acl",
+			Usage: "Manage Edge ACLs.",
+			Before: func(c *cli.Context) error {
+				// less than 2 here since the subcommand is the first Arg
+				if len(c.Args()) < 2 {
+					cli.ShowAppHelp(c)
+					return cli.NewExitError("Please specify service.", -1)
+				}
+				return nil
+			},
+			Subcommands: cli.Commands{
+				cli.Command{
+					Name:      "list",
+					Usage:     "List acls associated with a given service",
+					Action:    aclList,
+					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>)",
+				},
+				cli.Command{
+					Name:      "entry-add",
+					Usage:     "Add an entry to a acl",
+					Action:    aclAddEntry,
+					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <ACL_NAME> <IP>[/<MASK>]",
+				},
+				cli.Command{
+					Name:      "entry-rm",
+					Usage:     "Remove an entry from an acl",
+					Action:    aclRemoveEntry,
+					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <ACL_NAME> <IP>[/<MASK>]",
+				},
+				cli.Command{
+					Name:      "entry-ls",
+					Usage:     "List entries in an acl",
+					Action:    aclListEntries,
+					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <ACL_NAME>",
+				},
+			},
+		},
 	}
 
 	app.Run(os.Args)
