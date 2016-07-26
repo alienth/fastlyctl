@@ -33,17 +33,32 @@ func NewACLEntry(client *fastly.Client, serviceID, aclName, ip string, subnet ui
 	if err != nil {
 		return nil, err
 	}
-	activeVersion, err := GetActiveVersion(service)
-	if err != nil {
-		return nil, err
-	}
 
-	acl, err := client.GetACL(&fastly.GetACLInput{Service: service.ID, Version: activeVersion, Name: aclName})
+	acl, err := NewACL(client, service.ID, aclName)
 	if err != nil {
 		return nil, ErrGetACL
 	}
 
-	return &ACLEntry{ServiceID: service.ID, ACLID: acl.ID, IP: ip, Subnet: subnet, Comment: comment, Negated: negated, Client: client}, nil
+	var entry ACLEntry
+	entry.ServiceID = service.ID
+	entry.ACLID = acl.ID
+	entry.IP = ip
+	entry.Subnet = subnet
+	entry.Comment = comment
+	entry.Negated = negated
+	entry.Client = client
+
+	entries, err := acl.ListEntries()
+	if err != nil {
+		return nil, err
+	}
+	for _, e := range entries {
+		if e.IP == entry.IP {
+			entry.ID = e.ID
+		}
+	}
+
+	return &entry, nil
 }
 
 func (e *ACLEntry) Add() error {
@@ -66,7 +81,7 @@ func (e *ACLEntry) Add() error {
 func (e *ACLEntry) Remove() error {
 	var input fastly.DeleteACLEntryInput
 	input.Service = e.ServiceID
-	input.ACL = e.ID
+	input.ACL = e.ACLID
 	input.ID = e.ID
 	if err := e.Client.DeleteACLEntry(&input); err != nil {
 		if strings.Contains(err.Error(), "Record not found") {
