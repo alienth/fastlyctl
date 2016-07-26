@@ -55,9 +55,11 @@ func (e *ACLEntry) Add() error {
 	input.Comment = e.Comment
 	input.IP = e.IP
 	input.Negated = fastly.Compatibool(e.Negated)
-	if _, err := e.Client.CreateACLEntry(&input); err != nil {
+	entry, err := e.Client.CreateACLEntry(&input)
+	if err != nil {
 		return err
 	}
+	e.ID = entry.ID
 	return nil
 }
 

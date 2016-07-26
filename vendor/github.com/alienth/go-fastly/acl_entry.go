@@ -10,6 +10,7 @@ type ACLEntry struct {
 	ServiceID string `mapstructure:"service_id"`
 	ACLID     string `mapstructure:"acl_id"`
 
+	ID      string `mapstructure:"id"`
 	IP      string `mapstructure:"ip"`
 	Subnet  uint8  `mapstructure:"subnet"`
 	Comment string `mapstructure:"comment"`
