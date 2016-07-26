@@ -37,6 +37,7 @@ type SiteConfig struct {
 	DirectorBackends []fastly.CreateDirectorBackendInput
 	HealthChecks     []fastly.CreateHealthCheckInput
 	Dictionaries     []fastly.CreateDictionaryInput
+	ACLs             []fastly.CreateACLInput
 	VCLs             []VCL
 
 	// Override for backend SSLCertHostnames
@@ -612,6 +613,74 @@ func syncDictionaries(client *fastly.Client, s *fastly.Service, newDictionaries 
 	return needsSync, nil
 }
 
+// syncACLs actually compares the remote side ACLs, unlike most other sync
+// functions.  This is because ACL contents are not tied to a config version.
+// If we were to delete the ACLs here, we'd lose whatever IPs had been added
+// since creation.  Returns true if we made any changes, as that means we are
+// activatable despite there being no diff.
+func syncACLs(client *fastly.Client, s *fastly.Service, newACLs []fastly.CreateACLInput) (bool, error) {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return false, err
+	}
+	var needsCreation []*fastly.CreateACLInput
+	var needsDeletion []*fastly.DeleteACLInput
+	existingACLs, err := client.ListACLs(&fastly.ListACLsInput{Service: s.ID, Version: newversion.Number})
+	if err != nil {
+		return false, err
+	}
+	for _, a := range existingACLs {
+		found := false
+		for _, n := range newACLs {
+			if a.Name == n.Name {
+				found = true
+			}
+		}
+		if !found {
+			var i fastly.DeleteACLInput
+			i.Name = a.Name
+			i.Service = s.ID
+			i.Version = newversion.Number
+			needsDeletion = append(needsDeletion, &i)
+		}
+	}
+	for _, a := range newACLs {
+		if a == (fastly.CreateACLInput{}) {
+			continue
+		}
+		found := false
+		for _, n := range existingACLs {
+			if a.Name == n.Name {
+				found = true
+			}
+		}
+		if !found {
+			var i fastly.CreateACLInput
+			i.Name = a.Name
+			i.Service = s.ID
+			i.Version = newversion.Number
+			needsCreation = append(needsCreation, &i)
+		}
+	}
+
+	var needsSync bool
+	for _, a := range needsCreation {
+		needsSync = true
+		log.Debug(fmt.Sprintf("\t creating ACL: %s\n", a.Name))
+		if _, err = client.CreateACL(a); err != nil {
+			return false, err
+		}
+	}
+	for _, a := range needsDeletion {
+		needsSync = true
+		log.Debug(fmt.Sprintf("\t deleting ACL: %s\n", a.Name))
+		if err = client.DeleteACL(a); err != nil {
+			return false, err
+		}
+	}
+	return needsSync, nil
+}
+
 func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []fastly.CreateBackendInput) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
@@ -661,6 +730,11 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 	log.Debug("Syncing Dictionaries\n")
 	if mustSync, err = syncDictionaries(client, s, config.Dictionaries); err != nil {
 		return fmt.Errorf("Error syncing Dictionaries: %s", err)
+	}
+
+	log.Debug("Syncing ACLs\n")
+	if mustSync, err = syncACLs(client, s, config.ACLs); err != nil {
+		return fmt.Errorf("Error syncing ACLs: %s", err)
 	}
 
 	log.Debug("Syncing conditions\n")
