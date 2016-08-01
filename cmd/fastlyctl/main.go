@@ -47,7 +47,7 @@ func main() {
 			Name:      "push",
 			Aliases:   []string{"p"},
 			Usage:     "Push locally defined service configuration options to Fastly.",
-			ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>)...",
+			ArgsUsage: "<SERVICE_NAME>...",
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:  "all, a",
@@ -88,12 +88,12 @@ func main() {
 					Name:      "list",
 					Usage:     "List versions associated with a given service",
 					Action:    versionList,
-					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>)",
+					ArgsUsage: "<SERVICE_NAME>",
 				},
 				cli.Command{
 					Name:      "validate",
 					Usage:     "Validate a specified VERSION",
-					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <VERSION>",
+					ArgsUsage: "<SERVICE_NAME> <VERSION>",
 					Action:    versionValidate,
 					Before: func(c *cli.Context) error {
 						if _, err := strconv.Atoi(c.Args().Get(1)); err != nil {
@@ -105,7 +105,7 @@ func main() {
 				cli.Command{
 					Name:      "activate",
 					Usage:     "Activate a specified VERSION",
-					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <VERSION>",
+					ArgsUsage: "<SERVICE_NAME> <VERSION>",
 					Action:    versionActivate,
 					Before: func(c *cli.Context) error {
 						if !util.IsInteractive() && !c.GlobalBool("assume-yes") {
@@ -146,25 +146,25 @@ func main() {
 					Name:      "list",
 					Usage:     "List dictionaries associated with a given service",
 					Action:    dictionaryList,
-					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>)",
+					ArgsUsage: "<SERVICE_NAME>",
 				},
 				cli.Command{
 					Name:      "item-add",
 					Usage:     "Add an item to a dictionary",
 					Action:    dictionaryAddItem,
-					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <DICTIONARY_NAME> <ITEM_KEY> <ITEM_VALUE>",
+					ArgsUsage: "<SERVICE_NAME> <DICTIONARY_NAME> <ITEM_KEY> <ITEM_VALUE>",
 				},
 				cli.Command{
 					Name:      "item-rm",
 					Usage:     "Remove an item from a dictionary",
 					Action:    dictionaryRemoveItem,
-					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <DICTIONARY_NAME> <ITEM_KEY>",
+					ArgsUsage: "<SERVICE_NAME> <DICTIONARY_NAME> <ITEM_KEY>",
 				},
 				cli.Command{
 					Name:      "item-ls",
 					Usage:     "List items in a dictionary",
 					Action:    dictionaryListItems,
-					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <DICTIONARY_NAME>",
+					ArgsUsage: "<SERVICE_NAME> <DICTIONARY_NAME>",
 				},
 			},
 		},
@@ -184,25 +184,25 @@ func main() {
 					Name:      "list",
 					Usage:     "List acls associated with a given service",
 					Action:    aclList,
-					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>)",
+					ArgsUsage: "<SERVICE_NAME>",
 				},
 				cli.Command{
 					Name:      "entry-add",
 					Usage:     "Add an entry to a acl",
 					Action:    aclAddEntry,
-					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <ACL_NAME> <IP>[/<MASK>]",
+					ArgsUsage: "<SERVICE_NAME> <ACL_NAME> <IP>[/<MASK>]",
 				},
 				cli.Command{
 					Name:      "entry-rm",
 					Usage:     "Remove an entry from an acl",
 					Action:    aclRemoveEntry,
-					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <ACL_NAME> <IP>[/<MASK>]",
+					ArgsUsage: "<SERVICE_NAME> <ACL_NAME> <IP>[/<MASK>]",
 				},
 				cli.Command{
 					Name:      "entry-ls",
 					Usage:     "List entries in an acl",
 					Action:    aclListEntries,
-					ArgsUsage: "(<SERVICE_NAME> | <SERVICE_ID>) <ACL_NAME>",
+					ArgsUsage: "<SERVICE_NAME> <ACL_NAME>",
 				},
 			},
 		},

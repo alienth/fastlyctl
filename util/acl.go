@@ -28,8 +28,8 @@ type ACL struct {
 	Client    *fastly.Client
 }
 
-func NewACLEntry(client *fastly.Client, serviceID, aclName, ip string, subnet uint8, comment string, negated bool) (*ACLEntry, error) {
-	service, err := GetServiceByNameOrID(client, serviceID)
+func NewACLEntry(client *fastly.Client, serviceName, aclName, ip string, subnet uint8, comment string, negated bool) (*ACLEntry, error) {
+	service, err := GetServiceByName(client, serviceName)
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +92,8 @@ func (e *ACLEntry) Remove() error {
 	return nil
 }
 
-func NewACL(client *fastly.Client, serviceID, aclName string) (*ACL, error) {
-	service, err := GetServiceByNameOrID(client, serviceID)
+func NewACL(client *fastly.Client, serviceName, aclName string) (*ACL, error) {
+	service, err := GetServiceByNameOrID(client, serviceName)
 	if err != nil {
 		return nil, err
 	}

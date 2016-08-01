@@ -15,7 +15,7 @@ func versionList(c *cli.Context) error {
 	}
 	serviceParam := c.Args().Get(0)
 	var service *fastly.Service
-	if service, err = util.GetServiceByNameOrID(client, serviceParam); err != nil {
+	if service, err = util.GetServiceByName(client, serviceParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 	fmt.Printf("Versions for %s:\n\n", service.Name)
@@ -39,7 +39,7 @@ func versionValidate(c *cli.Context) error {
 	serviceParam := c.Args().Get(0)
 	version := c.Args().Get(1)
 	var service *fastly.Service
-	if service, err = util.GetServiceByNameOrID(client, serviceParam); err != nil {
+	if service, err = util.GetServiceByName(client, serviceParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 	if err := util.ValidateVersion(client, service, version); err != nil {
@@ -57,7 +57,7 @@ func versionActivate(c *cli.Context) error {
 	serviceParam := c.Args().Get(0)
 	versionNumber := c.Args().Get(1)
 	var service *fastly.Service
-	if service, err = util.GetServiceByNameOrID(client, serviceParam); err != nil {
+	if service, err = util.GetServiceByName(client, serviceParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 	var version *fastly.Version

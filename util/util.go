@@ -16,6 +16,7 @@ import (
 
 var ErrNonInteractive = errors.New("In non-interactive shell and --assume-yes not used.")
 
+// This method is being deprecated as it generates a lot of errors, which fastly isn't fond of.
 func GetServiceByNameOrID(client *fastly.Client, identifier string) (*fastly.Service, error) {
 	var service *fastly.Service
 	service, err := client.SearchService(&fastly.SearchServiceInput{Name: identifier})
@@ -23,6 +24,24 @@ func GetServiceByNameOrID(client *fastly.Client, identifier string) (*fastly.Ser
 		if service, err = client.GetService(&fastly.GetServiceInput{ID: identifier}); err != nil {
 			return nil, fmt.Errorf("Error fetching service %s: %s", identifier, err)
 		}
+	}
+	return service, nil
+}
+
+func GetServiceByName(client *fastly.Client, name string) (*fastly.Service, error) {
+	var service *fastly.Service
+	service, err := client.SearchService(&fastly.SearchServiceInput{Name: name})
+	if err != nil {
+		return nil, fmt.Errorf("Error fetching service %s: %s", name, err)
+	}
+	return service, nil
+}
+
+func GetServiceByID(client *fastly.Client, identifier string) (*fastly.Service, error) {
+	var service *fastly.Service
+	var err error
+	if service, err = client.GetService(&fastly.GetServiceInput{ID: identifier}); err != nil {
+		return nil, fmt.Errorf("Error fetching service %s: %s", identifier, err)
 	}
 	return service, nil
 }

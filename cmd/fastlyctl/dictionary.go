@@ -16,7 +16,7 @@ func dictionaryList(c *cli.Context) error {
 
 	serviceParam := c.Args().Get(0)
 	var service *fastly.Service
-	if service, err = util.GetServiceByNameOrID(client, serviceParam); err != nil {
+	if service, err = util.GetServiceByName(client, serviceParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 	activeVersion, err := util.GetActiveVersion(service)

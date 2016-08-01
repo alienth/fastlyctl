@@ -39,7 +39,7 @@ func main() {
 		},
 		cli.StringSliceFlag{
 			Name:  "service, s",
-			Usage: "The service ID or name which we're going to ban on. Can be specified multiple times. (default: all services which have the specified dictionary)",
+			Usage: "The service name which we're going to ban on. Can be specified multiple times. (default: all services which have the specified dictionary)",
 		},
 	}
 

@@ -24,8 +24,8 @@ type Dictionary struct {
 	Client       *fastly.Client
 }
 
-func NewDictionaryItem(client *fastly.Client, serviceID, dictionaryName, key, value string) (*DictionaryItem, error) {
-	service, err := GetServiceByNameOrID(client, serviceID)
+func NewDictionaryItem(client *fastly.Client, serviceName, dictionaryName, key, value string) (*DictionaryItem, error) {
+	service, err := GetServiceByName(client, serviceName)
 	if err != nil {
 		return nil, err
 	}
@@ -68,8 +68,8 @@ func (i *DictionaryItem) Remove() error {
 	return nil
 }
 
-func NewDictionary(client *fastly.Client, serviceID, dictionaryName string) (*Dictionary, error) {
-	service, err := GetServiceByNameOrID(client, serviceID)
+func NewDictionary(client *fastly.Client, serviceName, dictionaryName string) (*Dictionary, error) {
+	service, err := GetServiceByName(client, serviceName)
 	if err != nil {
 		return nil, err
 	}
