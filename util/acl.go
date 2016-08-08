@@ -34,7 +34,7 @@ func NewACLEntry(client *fastly.Client, serviceName, aclName, ip string, subnet 
 		return nil, err
 	}
 
-	acl, err := NewACL(client, service.ID, aclName)
+	acl, err := NewACL(client, service.Name, aclName)
 	if err != nil {
 		return nil, ErrGetACL
 	}
@@ -93,7 +93,7 @@ func (e *ACLEntry) Remove() error {
 }
 
 func NewACL(client *fastly.Client, serviceName, aclName string) (*ACL, error) {
-	service, err := GetServiceByNameOrID(client, serviceName)
+	service, err := GetServiceByName(client, serviceName)
 	if err != nil {
 		return nil, err
 	}
