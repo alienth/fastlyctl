@@ -204,10 +204,11 @@ func (c *Client) DeleteACLEntry(i *DeleteACLEntryInput) error {
 	}
 
 	path := fmt.Sprintf("/service/%s/acl/%s/entry/%s", i.Service, i.ACL, i.ID)
-	_, err := c.Delete(path, nil)
+	resp, err := c.Delete(path, nil)
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	// Unlike other endpoints, the acl endpoint does not return a status
 	// response - it just returns a 200 OK.
