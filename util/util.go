@@ -16,43 +16,43 @@ import (
 
 var ErrNonInteractive = errors.New("In non-interactive shell and --assume-yes not used.")
 
-// This method is being deprecated as it generates a lot of errors, which fastly isn't fond of.
-func GetServiceByNameOrID(client *fastly.Client, identifier string) (*fastly.Service, error) {
-	var service *fastly.Service
-	service, err := client.SearchService(&fastly.SearchServiceInput{Name: identifier})
-	if err != nil {
-		if service, err = client.GetService(&fastly.GetServiceInput{ID: identifier}); err != nil {
-			return nil, fmt.Errorf("Error fetching service %s: %s", identifier, err)
-		}
-	}
-	return service, nil
-}
-
 func GetServiceByName(client *fastly.Client, name string) (*fastly.Service, error) {
 	var service *fastly.Service
-	service, err := client.SearchService(&fastly.SearchServiceInput{Name: name})
+	service, _, err := client.Service.Search(name)
 	if err != nil {
-		return nil, fmt.Errorf("Error fetching service %s: %s", name, err)
+		return nil, err
 	}
 	return service, nil
 }
 
-func GetServiceByID(client *fastly.Client, identifier string) (*fastly.Service, error) {
-	var service *fastly.Service
+func GetDictionaryByName(client *fastly.Client, serviceName, dictName string) (*fastly.Dictionary, error) {
 	var err error
-	if service, err = client.GetService(&fastly.GetServiceInput{ID: identifier}); err != nil {
-		return nil, fmt.Errorf("Error fetching service %s: %s", identifier, err)
+	service, err := GetServiceByName(client, serviceName)
+	if err != nil {
+		return nil, err
 	}
-	return service, nil
+	activeVersion, err := GetActiveVersion(service)
+	if err != nil {
+		return nil, err
+	}
+	_ = activeVersion
+
+	dictionary, _, err := client.Dictionary.Get(service.ID, activeVersion, dictName)
+	if err != nil {
+		return nil, err
+	}
+
+	return dictionary, err
 }
 
 // getActiveVersion takes in a *fastly.Service and spits out the config version
 // that is currently active for that service.
-func GetActiveVersion(service *fastly.Service) (string, error) {
+func GetActiveVersion(service *fastly.Service) (uint, error) {
 	// Depending on how the service was fetched, it may or may not
 	// have a filled ActiveVersion field.
-	if service.ActiveVersion != 0 {
-		return strconv.Itoa(int(service.ActiveVersion)), nil
+	// TODO verify this is still the case
+	if service.Version != 0 {
+		return service.Version, nil
 	} else {
 		for _, version := range service.Versions {
 			if version.Active {
@@ -60,7 +60,7 @@ func GetActiveVersion(service *fastly.Service) (string, error) {
 			}
 		}
 	}
-	return "", fmt.Errorf("Unable to find the active version for service %s", service.Name)
+	return 0, fmt.Errorf("Unable to find the active version for service %s", service.Name)
 }
 
 func Prompt(question string) (bool, error) {
@@ -92,7 +92,7 @@ func ActivateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v
 		return err
 	}
 	assumeYes := c.GlobalBool("assume-yes")
-	diff, err := client.GetDiff(&fastly.GetDiffInput{Service: s.ID, Format: "text", From: activeVersion, To: v.Number})
+	diff, _, err := client.Diff.Get(s.ID, activeVersion, v.Number, "text")
 	if err != nil {
 		return err
 	}
@@ -134,31 +134,28 @@ func ActivateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v
 	}
 
 	if !assumeYes {
-		if proceed, err = Prompt("Activate version " + v.Number + " for service " + s.Name + "?"); err != nil {
+		if proceed, err = Prompt("Activate version " + strconv.Itoa(int(v.Number)) + " for service " + s.Name + "?"); err != nil {
 			return err
 		}
 	}
 	if proceed || assumeYes {
-		if _, err = client.ActivateVersion(&fastly.ActivateVersionInput{Service: s.ID, Version: v.Number}); err != nil {
+		if _, _, err = client.Version.Activate(s.ID, v.Number); err != nil {
 			return err
 		}
-		fmt.Printf("Activated version %s for %s. Old version: %s\n", v.Number, s.Name, activeVersion)
+		fmt.Printf("Activated version %d for %s. Old version: %d\n", v.Number, s.Name, activeVersion)
 	}
 	return nil
 }
 
 // validateVersion takes in a service and version number and returns an
 // error if the version is invalid.
-func ValidateVersion(client *fastly.Client, service *fastly.Service, version string) error {
-	result, msg, err := client.ValidateVersion(&fastly.ValidateVersionInput{Service: service.ID, Version: version})
+func ValidateVersion(client *fastly.Client, service *fastly.Service, version uint) error {
+	// TODO verify this logic
+	_, err := client.Version.Validate(service.ID, version)
 	if err != nil {
 		return fmt.Errorf("Error validating version: %s", err)
 	}
-	if result {
-		fmt.Printf("Version %s on service %s successfully validated!\n", version, service.Name)
-	} else {
-		return fmt.Errorf("Version %s on service %s is invalid:\n\n%s", version, service.Name, msg)
-	}
+	fmt.Printf("Version %d on service %s successfully validated!\n", version, service.Name)
 	return nil
 }
 
@@ -169,18 +166,12 @@ func ValidateVersion(client *fastly.Client, service *fastly.Service, version str
 // comparing a version with itself, and then generating a diff between the from
 // and to versions.  If the two diffs are identical, then there is no
 // difference between from and to.
-func VersionsEqual(c *fastly.Client, s *fastly.Service, from string, to string) (bool, error) {
-	var i fastly.GetDiffInput
-	i.Service = s.ID
-	// Intentional
-	i.To = from
-	i.From = from
-	noDiff, err := c.GetDiff(&i)
+func VersionsEqual(c *fastly.Client, s *fastly.Service, from, to uint) (bool, error) {
+	noDiff, _, err := c.Diff.Get(s.ID, from, from, "text")
 	if err != nil {
 		return false, err
 	}
-	i.To = to
-	diff, err := c.GetDiff(&i)
+	diff, _, err := c.Diff.Get(s.ID, from, to, "text")
 	if err != nil {
 		return false, err
 	}

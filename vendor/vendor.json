@@ -15,12 +15,6 @@
 			"revisionTime": "2016-06-29T21:43:12Z"
 		},
 		{
-			"checksumSHA1": "9Xaai4tNZ/s/xmZNMVHe78acC8s=",
-			"path": "github.com/alienth/go-fastly",
-			"revision": "dd506c6235d97f263d9f1be24242ab0a6d6d1953",
-			"revisionTime": "2016-09-21T00:33:54Z"
-		},
-		{
 			"checksumSHA1": "Uzyon2091lmwacNsl1hCytjhHtg=",
 			"path": "github.com/hashicorp/go-cleanhttp",
 			"revision": "ad28ea4487f05916463e2423a55166280e8254b5",

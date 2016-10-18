@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+	"strconv"
 
 	"github.com/alienth/fastlyctl/util"
 	"github.com/alienth/go-fastly"
@@ -9,13 +11,10 @@ import (
 )
 
 func versionList(c *cli.Context) error {
-	client, err := fastly.NewClient(c.GlobalString("fastly-key"))
-	if err != nil {
-		return cli.NewExitError(fmt.Sprintf("Error initializing fastly client: %s", err), -1)
-	}
+	client := fastly.NewClient(nil, c.GlobalString("fastly-key"))
 	serviceParam := c.Args().Get(0)
-	var service *fastly.Service
-	if service, err = util.GetServiceByName(client, serviceParam); err != nil {
+	service, err := util.GetServiceByName(client, serviceParam)
+	if err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 	fmt.Printf("Versions for %s:\n\n", service.Name)
@@ -23,49 +22,58 @@ func versionList(c *cli.Context) error {
 	for _, version := range service.Versions {
 		active := ""
 		if version.Active {
-			active = "* "
+			active = "*"
 		}
-		fmt.Printf("%5s %-27s %-27s %s\n", active+version.Number, version.Created, version.Updated, version.Comment)
+		fmt.Printf("%2s %4d %-27s %-27s %s\n", active, version.Number, version.Created, version.Updated, version.Comment)
 	}
 
 	return nil
 }
 
 func versionValidate(c *cli.Context) error {
-	client, err := fastly.NewClient(c.GlobalString("fastly-key"))
-	if err != nil {
-		return cli.NewExitError(fmt.Sprintf("Error initializing fastly client: %s", err), -1)
-	}
+	client := fastly.NewClient(nil, c.GlobalString("fastly-key"))
 	serviceParam := c.Args().Get(0)
-	version := c.Args().Get(1)
+	version, err := strconv.Atoi(c.Args().Get(1))
+	if err != nil {
+		return cli.NewExitError("Invalid version number.\n", -1)
+	}
+
 	var service *fastly.Service
 	if service, err = util.GetServiceByName(client, serviceParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
-	if err := util.ValidateVersion(client, service, version); err != nil {
+
+	resp, err := client.Version.Validate(service.ID, uint(version))
+	if err != nil {
 		return cli.NewExitError(err.Error(), -1)
+	}
+
+	if resp.StatusCode == http.StatusOK {
+		fmt.Printf("Version %d on service %s successfully validated!\n", version, serviceParam)
+	} else {
+		return cli.NewExitError(fmt.Sprintf("Version %d on service %s failed to validate\n", version, serviceParam), -1)
 	}
 
 	return nil
 }
 
 func versionActivate(c *cli.Context) error {
-	client, err := fastly.NewClient(c.GlobalString("fastly-key"))
-	if err != nil {
-		return cli.NewExitError(fmt.Sprintf("Error initializing fastly client: %s", err), -1)
-	}
+	client := fastly.NewClient(nil, c.GlobalString("fastly-key"))
 	serviceParam := c.Args().Get(0)
-	versionNumber := c.Args().Get(1)
+	version, err := strconv.Atoi(c.Args().Get(1))
+	if err != nil {
+		return cli.NewExitError("Invalid version number.\n", -1)
+	}
+
 	var service *fastly.Service
 	if service, err = util.GetServiceByName(client, serviceParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
-	var version *fastly.Version
-	if version, err = client.GetVersion(&fastly.GetVersionInput{Service: service.ID, Version: versionNumber}); err != nil {
-		return cli.NewExitError(fmt.Sprintf("Error fetching version: %s", err), -1)
-	}
-	if err = util.ActivateVersion(c, client, service, version); err != nil {
+
+	if _, _, err = client.Version.Activate(service.ID, uint(version)); err != nil {
 		return cli.NewExitError(fmt.Sprintf("Error activating version: %s", err), -1)
+	} else {
+		fmt.Printf("Version %d on service %s successfully activated!\n", version, serviceParam)
 	}
 
 	return nil

@@ -11,14 +11,12 @@ import (
 )
 
 func aclList(c *cli.Context) error {
-	client, err := fastly.NewClient(c.GlobalString("fastly-key"))
-	if err != nil {
-		return cli.NewExitError(fmt.Sprintf("Error initializing fastly client: %s", err), -1)
-	}
+	client := fastly.NewClient(nil, c.GlobalString("fastly-key"))
 
+	var err error
 	serviceParam := c.Args().Get(0)
 	var service *fastly.Service
-	if service, err = util.GetServiceByName(client, serviceParam); err != nil {
+	if service, _, err = client.Service.Search(serviceParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 	activeVersion, err := util.GetActiveVersion(service)
@@ -26,15 +24,35 @@ func aclList(c *cli.Context) error {
 		return cli.NewExitError(err.Error(), -1)
 	}
 
-	acls, err := client.ListACLs(&fastly.ListACLsInput{Service: service.ID, Version: activeVersion})
+	acls, _, err := client.ACL.List(service.ID, activeVersion)
 	if err != nil {
 		return cli.NewExitError(fmt.Sprintf("Unable to list ACLs for service %s\n", service.Name), -1)
 	}
 	fmt.Printf("ACLs for %s:\n\n", service.Name)
-	for _, d := range acls {
-		fmt.Println(d.Name)
+	for _, a := range acls {
+		fmt.Println(a.Name)
 	}
 	return nil
+}
+
+func getACL(client *fastly.Client, serviceName, aclName string) (*fastly.ACL, error) {
+	var err error
+	var service *fastly.Service
+	if service, _, err = client.Service.Search(serviceName); err != nil {
+		return nil, err
+	}
+	activeVersion, err := util.GetActiveVersion(service)
+	if err != nil {
+		return nil, err
+	}
+	_ = activeVersion
+
+	acl, _, err := client.ACL.Get(service.ID, activeVersion, aclName)
+	if err != nil {
+		return nil, err
+	}
+
+	return acl, err
 }
 
 func ipMaskSplit(ipParam string) (string, uint8, error) {
@@ -51,10 +69,7 @@ func ipMaskSplit(ipParam string) (string, uint8, error) {
 }
 
 func aclAddEntry(c *cli.Context) error {
-	client, err := fastly.NewClient(c.GlobalString("fastly-key"))
-	if err != nil {
-		return cli.NewExitError(fmt.Sprintf("Error initializing fastly client: %s", err), -1)
-	}
+	client := fastly.NewClient(nil, c.GlobalString("fastly-key"))
 
 	serviceParam := c.Args().Get(0)
 	aclParam := c.Args().Get(1)
@@ -63,15 +78,21 @@ func aclAddEntry(c *cli.Context) error {
 		return cli.NewExitError(fmt.Sprintf("Invalid subnet mask specified: %s", err), -1)
 	}
 
-	negate := c.Bool("negate")
+	negate := fastly.Compatibool(c.Bool("negate"))
 	comment := c.String("comment")
 
-	item, err := util.NewACLEntry(client, serviceParam, aclParam, ip, subnet, comment, negate)
+	acl, err := getACL(client, serviceParam, aclParam)
 	if err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 
-	if err := item.Add(); err != nil {
+	entry := new(fastly.ACLEntry)
+	entry.IP = ip
+	entry.Subnet = subnet
+	entry.Comment = comment
+	entry.Negated = negate
+
+	if _, _, err = client.ACLEntry.Create(acl.ServiceID, acl.ID, entry); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 
@@ -79,10 +100,7 @@ func aclAddEntry(c *cli.Context) error {
 }
 
 func aclRemoveEntry(c *cli.Context) error {
-	client, err := fastly.NewClient(c.GlobalString("fastly-key"))
-	if err != nil {
-		return cli.NewExitError(fmt.Sprintf("Error initializing fastly client: %s", err), -1)
-	}
+	client := fastly.NewClient(nil, c.GlobalString("fastly-key"))
 
 	serviceParam := c.Args().Get(0)
 	aclParam := c.Args().Get(1)
@@ -91,12 +109,29 @@ func aclRemoveEntry(c *cli.Context) error {
 		return cli.NewExitError(fmt.Sprintf("Invalid subnet mask specified: %s", err), -1)
 	}
 
-	item, err := util.NewACLEntry(client, serviceParam, aclParam, ip, subnet, "", false)
+	acl, err := getACL(client, serviceParam, aclParam)
 	if err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 
-	if err := item.Remove(); err != nil {
+	entries, _, err := client.ACLEntry.List(acl.ServiceID, acl.ID)
+	if err != nil {
+		return cli.NewExitError(err.Error(), -1)
+	}
+
+	var entry = new(fastly.ACLEntry)
+	for _, e := range entries {
+		if e.IP == ip && e.Subnet == subnet {
+			entry = e
+			break
+		}
+	}
+
+	if entry == nil {
+		return cli.NewExitError("Unable to find ACL entry\n", -1)
+	}
+
+	if _, err = client.ACLEntry.Delete(acl.ServiceID, acl.ID, entry.ID); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 
@@ -104,24 +139,22 @@ func aclRemoveEntry(c *cli.Context) error {
 }
 
 func aclListEntries(c *cli.Context) error {
-	client, err := fastly.NewClient(c.GlobalString("fastly-key"))
-	if err != nil {
-		return cli.NewExitError(fmt.Sprintf("Error initializing fastly client: %s", err), -1)
-	}
+	client := fastly.NewClient(nil, c.GlobalString("fastly-key"))
 
 	serviceParam := c.Args().Get(0)
-	dictParam := c.Args().Get(1)
-	acl, err := util.NewACL(client, serviceParam, dictParam)
+	aclParam := c.Args().Get(1)
+
+	acl, err := getACL(client, serviceParam, aclParam)
 	if err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 
-	entries, err := acl.ListEntries()
+	entries, _, err := client.ACLEntry.List(acl.ServiceID, acl.ID)
 	if err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 
-	fmt.Printf("Entries in acl %s for service %s:\n\n", dictParam, serviceParam)
+	fmt.Printf("Entries in acl %s for service %s:\n\n", aclParam, serviceParam)
 	for _, entry := range entries {
 		fmt.Println(entry.IP, entry.Subnet, entry.Negated, entry.Comment)
 	}

@@ -9,14 +9,12 @@ import (
 )
 
 func dictionaryList(c *cli.Context) error {
-	client, err := fastly.NewClient(c.GlobalString("fastly-key"))
-	if err != nil {
-		return cli.NewExitError(fmt.Sprintf("Error initializing fastly client: %s", err), -1)
-	}
+	client := fastly.NewClient(nil, c.GlobalString("fastly-key"))
 
+	var err error
 	serviceParam := c.Args().Get(0)
 	var service *fastly.Service
-	if service, err = util.GetServiceByName(client, serviceParam); err != nil {
+	if service, _, err = client.Service.Search(serviceParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 	activeVersion, err := util.GetActiveVersion(service)
@@ -24,7 +22,7 @@ func dictionaryList(c *cli.Context) error {
 		return cli.NewExitError(err.Error(), -1)
 	}
 
-	dictionaries, err := client.ListDictionaries(&fastly.ListDictionariesInput{Service: service.ID, Version: activeVersion})
+	dictionaries, _, err := client.Dictionary.List(service.ID, activeVersion)
 	if err != nil {
 		return cli.NewExitError(fmt.Sprintf("Unable to list dictionaries for service %s\n", service.Name), -1)
 	}
@@ -36,22 +34,23 @@ func dictionaryList(c *cli.Context) error {
 }
 
 func dictionaryAddItem(c *cli.Context) error {
-	client, err := fastly.NewClient(c.GlobalString("fastly-key"))
-	if err != nil {
-		return cli.NewExitError(fmt.Sprintf("Error initializing fastly client: %s", err), -1)
-	}
+	client := fastly.NewClient(nil, c.GlobalString("fastly-key"))
 
 	serviceParam := c.Args().Get(0)
 	dictParam := c.Args().Get(1)
 	keyParam := c.Args().Get(2)
 	valueParam := c.Args().Get(3)
 
-	item, err := util.NewDictionaryItem(client, serviceParam, dictParam, keyParam, valueParam)
+	dictionary, err := util.GetDictionaryByName(client, serviceParam, dictParam)
 	if err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 
-	if err := item.Add(); err != nil {
+	item := new(fastly.DictionaryItem)
+	item.Key = keyParam
+	item.Value = valueParam
+
+	if _, _, err = client.DictionaryItem.Create(dictionary.ServiceID, dictionary.ID, item); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 
@@ -59,21 +58,18 @@ func dictionaryAddItem(c *cli.Context) error {
 }
 
 func dictionaryRemoveItem(c *cli.Context) error {
-	client, err := fastly.NewClient(c.GlobalString("fastly-key"))
-	if err != nil {
-		return cli.NewExitError(fmt.Sprintf("Error initializing fastly client: %s", err), -1)
-	}
+	client := fastly.NewClient(nil, c.GlobalString("fastly-key"))
 
 	serviceParam := c.Args().Get(0)
 	dictParam := c.Args().Get(1)
 	keyParam := c.Args().Get(2)
 
-	item, err := util.NewDictionaryItem(client, serviceParam, dictParam, keyParam, "")
+	dictionary, err := util.GetDictionaryByName(client, serviceParam, dictParam)
 	if err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 
-	if err := item.Remove(); err != nil {
+	if _, err = client.DictionaryItem.Delete(dictionary.ServiceID, dictionary.ID, keyParam); err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 
@@ -81,26 +77,24 @@ func dictionaryRemoveItem(c *cli.Context) error {
 }
 
 func dictionaryListItems(c *cli.Context) error {
-	client, err := fastly.NewClient(c.GlobalString("fastly-key"))
-	if err != nil {
-		return cli.NewExitError(fmt.Sprintf("Error initializing fastly client: %s", err), -1)
-	}
+	client := fastly.NewClient(nil, c.GlobalString("fastly-key"))
 
 	serviceParam := c.Args().Get(0)
 	dictParam := c.Args().Get(1)
-	dictionary, err := util.NewDictionary(client, serviceParam, dictParam)
+
+	dictionary, err := util.GetDictionaryByName(client, serviceParam, dictParam)
 	if err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 
-	items, err := dictionary.ListItems()
+	items, _, err := client.DictionaryItem.List(dictionary.ServiceID, dictionary.ID)
 	if err != nil {
 		return cli.NewExitError(err.Error(), -1)
 	}
 
 	fmt.Printf("Items in dictionary %s for service %s:\n\n", dictParam, serviceParam)
 	for _, item := range items {
-		fmt.Println(item.ItemKey, item.ItemValue)
+		fmt.Println(item.Key, item.Value)
 	}
 
 	return nil
