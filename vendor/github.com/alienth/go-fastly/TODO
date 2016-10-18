@@ -1,0 +1,6 @@
+
+Don't send read-only fields when making changes, like serviceID.
+    Perhaps add a read-only tag and then have the JSON marshaling not care about those fields?
+
+
+Iota-ize the possible API batch change values.

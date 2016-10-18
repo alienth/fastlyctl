@@ -9,34 +9,16 @@
 			"revisionTime": "2016-04-26T10:16:13Z"
 		},
 		{
-			"checksumSHA1": "csR8njyJfkweB0RCtfnLwgXNeqQ=",
-			"path": "github.com/ajg/form",
-			"revision": "7ff89c75808766205bfa4411abb436c98c33eb5e",
-			"revisionTime": "2016-06-29T21:43:12Z"
-		},
-		{
-			"checksumSHA1": "9Xaai4tNZ/s/xmZNMVHe78acC8s=",
+			"checksumSHA1": "LX2ZXV3BRphozD78+CvTGtOpGq0=",
 			"path": "github.com/alienth/go-fastly",
-			"revision": "dd506c6235d97f263d9f1be24242ab0a6d6d1953",
-			"revisionTime": "2016-09-21T00:33:54Z"
-		},
-		{
-			"checksumSHA1": "Uzyon2091lmwacNsl1hCytjhHtg=",
-			"path": "github.com/hashicorp/go-cleanhttp",
-			"revision": "ad28ea4487f05916463e2423a55166280e8254b5",
-			"revisionTime": "2016-04-07T17:41:26Z"
+			"revision": "7e7f9247ad6e54b6a83ef3b50040b5e415cea67e",
+			"revisionTime": "2016-10-20T08:10:24Z"
 		},
 		{
 			"checksumSHA1": "hwGdeQbcfc2RvIQS5wAaYRKJDd4=",
 			"path": "github.com/imdario/mergo",
 			"revision": "50d4dbd4eb0e84778abe37cefef140271d96fade",
 			"revisionTime": "2016-05-17T06:44:35Z"
-		},
-		{
-			"checksumSHA1": "Dz6YPuvQ7AbRoNoc0t1pW4ABF14=",
-			"path": "github.com/mitchellh/mapstructure",
-			"revision": "21a35fb16463dfb7c8eee579c65d995d95e64d1e",
-			"revisionTime": "2016-07-13T01:02:19Z"
 		},
 		{
 			"checksumSHA1": "hx0Q1JrC6iQDYdkUdGldbzjDMV0=",

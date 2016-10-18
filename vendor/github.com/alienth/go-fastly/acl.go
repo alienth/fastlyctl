@@ -2,21 +2,21 @@ package fastly
 
 import (
 	"fmt"
+	"net/http"
 	"sort"
 )
 
-// ACL represents a ACL response from the Fastly API.
-type ACL struct {
-	ServiceID string `mapstructure:"service_id"`
-	Version   string `mapstructure:"version"`
+type ACLConfig config
 
-	ID      string `mapstructure:"id"`
-	Name    string `mapstructure:"name"`
-	Created string `mapstructure:"created_at"`
-	Updated string `mapstructure:"updated_at"`
+type ACL struct {
+	ServiceID string `json:"service_id"`
+	Version   uint   `json:"version,string"`
+	ID        string `json:"id"`
+
+	Name string `json:"name" url:"name,omitempty"`
 }
 
-// aclsByName is a sortable list of dictionaries.
+// aclsByName is a sortable list of acls.
 type aclsByName []*ACL
 
 // Len, Swap, and Less implement the sortable interface.
@@ -26,183 +26,92 @@ func (s aclsByName) Less(i, j int) bool {
 	return s[i].Name < s[j].Name
 }
 
-// ListACLsInput is used as input to the ListACLs function.
-type ListACLsInput struct {
-	// Service is the ID of the service (required).
-	Service string
+// List acls for a specific service and version.
+func (c *ACLConfig) List(serviceID string, version uint) ([]*ACL, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/acl", serviceID, version)
 
-	// Version is the specific configuration version (required).
-	Version string
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	acls := new([]*ACL)
+	resp, err := c.client.Do(req, acls)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	sort.Stable(aclsByName(*acls))
+
+	return *acls, resp, nil
 }
 
-// ListACLs returns the list of ACLs for the configuration version.
-func (c *Client) ListACLs(i *ListACLsInput) ([]*ACL, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
+// Get fetches a specific acl by name.
+func (c *ACLConfig) Get(serviceID string, version uint, name string) (*ACL, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/acl/%s", serviceID, version, name)
+
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	if i.Version == "" {
-		return nil, ErrMissingVersion
+	acl := new(ACL)
+	resp, err := c.client.Do(req, acl)
+	if err != nil {
+		return nil, resp, err
+	}
+	return acl, resp, nil
+}
+
+// Create a new acl.
+func (c *ACLConfig) Create(serviceID string, version uint, acl *ACL) (*ACL, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/acl", serviceID, version)
+
+	req, err := c.client.NewJSONRequest("POST", u, acl)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	path := fmt.Sprintf("/service/%s/version/%s/acl", i.Service, i.Version)
-	resp, err := c.Get(path, nil)
+	b := new(ACL)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
+}
+
+// Update a acl
+func (c *ACLConfig) Update(serviceID string, version uint, name string, acl *ACL) (*ACL, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/acl/%s", serviceID, version, name)
+
+	req, err := c.client.NewJSONRequest("PUT", u, acl)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	b := new(ACL)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
+}
+
+// Delete a acl
+func (c *ACLConfig) Delete(serviceID string, version uint, name string) (*http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/acl/%s", serviceID, version, name)
+
+	req, err := c.client.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var bs []*ACL
-	if err := decodeJSON(&bs, resp.Body); err != nil {
-		return nil, err
-	}
-	sort.Stable(aclsByName(bs))
-	return bs, nil
-}
-
-// CreateACLInput is used as input to the CreateACL function.
-type CreateACLInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	Name string `form:"name,omitempty"`
-}
-
-// CreateACL creates a new Fastly acl.
-func (c *Client) CreateACL(i *CreateACLInput) (*ACL, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/acl", i.Service, i.Version)
-	resp, err := c.PostForm(path, i, nil)
+	resp, err := c.client.Do(req, nil)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
 
-	var b *ACL
-	if err := decodeJSON(&b, resp.Body); err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-// GetACLInput is used as input to the GetACL function.
-type GetACLInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the acl to fetch.
-	Name string
-}
-
-// GetACL gets the acl configuration with the given parameters.
-func (c *Client) GetACL(i *GetACLInput) (*ACL, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return nil, ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/acl/%s", i.Service, i.Version, i.Name)
-	resp, err := c.Get(path, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var b *ACL
-	if err := decodeJSON(&b, resp.Body); err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-// UpdateACLInput is used as input to the UpdateACL function.
-type UpdateACLInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the acl to update.
-	Name string
-
-	NewName string `form:"name,omitempty"`
-}
-
-// UpdateACL updates a specific acl.
-func (c *Client) UpdateACL(i *UpdateACLInput) (*ACL, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return nil, ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/acl/%s", i.Service, i.Version, i.Name)
-	resp, err := c.PutForm(path, i, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var b *ACL
-	if err := decodeJSON(&b, resp.Body); err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-// DeleteACLInput is the input parameter to DeleteACL.
-type DeleteACLInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the acl to delete (required).
-	Name string
-}
-
-// DeleteACL deletes the given acl version.
-func (c *Client) DeleteACL(i *DeleteACLInput) error {
-	if i.Service == "" {
-		return ErrMissingService
-	}
-
-	if i.Version == "" {
-		return ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/acl/%s", i.Service, i.Version, i.Name)
-	resp, err := c.Delete(path, nil)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// Unlike other endpoints, the acl endpoint does not return a status
-	// response - it just returns a 200 OK.
-	return nil
+	return resp, nil
 }

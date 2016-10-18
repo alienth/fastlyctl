@@ -1,77 +1,52 @@
 package fastly
 
-import "fmt"
+import (
+	"fmt"
+	"net/http"
+)
 
-// Settings represents a backend response from the Fastly API.
+type SettingsConfig config
+
 type Settings struct {
-	ServiceID string `mapstructure:"service_id"`
-	Version   string `mapstructure:"version"`
+	ServiceID string `json:"service_id,omitempty"`
+	Version   uint   `json:"version,omitempty"`
 
-	DefaultTTL  uint   `mapstructure:"general.default_ttl"`
-	DefaultHost string `mapstructure:"general.default_host"`
+	DefaultTTL  uint   `json:"general.default_ttl,omitempty"`
+	DefaultHost string `json:"general.default_host,omitempty"`
 }
 
-// GetSettingsInput is used as input to the GetSettings function.
-type GetSettingsInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-}
+// Get settings
+func (c *SettingsConfig) Get(serviceID string, version uint) (*Settings, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/settings", serviceID, version)
 
-// GetSettings gets the backend configuration with the given parameters.
-func (c *Client) GetSettings(i *GetSettingsInput) (*Settings, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/settings", i.Service, i.Version)
-	resp, err := c.Get(path, nil)
+	req, err := c.client.NewRequest("GET", u, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	var b *Settings
-	if err := decodeJSON(&b, resp.Body); err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-// UpdateSettingsInput is used as input to the UpdateSettings function.
-type UpdateSettingsInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	DefaultTTL  uint   `form:"general.default_ttl,omitempty"`
-	DefaultHost string `form:"general.default_host,omitempty"`
-}
-
-// UpdateSettings updates a specific backend.
-func (c *Client) UpdateSettings(i *UpdateSettingsInput) (*Settings, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/settings", i.Service, i.Version)
-	resp, err := c.PutForm(path, i, nil)
+	settings := new(Settings)
+	resp, err := c.client.Do(req, settings)
 	if err != nil {
-		return nil, err
+		return nil, resp, err
 	}
 
-	var b *Settings
-	if err := decodeJSON(&b, resp.Body); err != nil {
-		return nil, err
+	return settings, resp, nil
+}
+
+// Update settings
+func (c *SettingsConfig) Update(serviceID string, version uint, settings *Settings) (*Settings, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/settings", serviceID, version)
+
+	req, err := c.client.NewJSONRequest("PUT", u, settings)
+	if err != nil {
+		return nil, nil, err
 	}
-	return b, nil
+
+	b := new(Settings)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
 }

@@ -5,205 +5,207 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"runtime"
-	"strings"
-
-	"github.com/ajg/form"
-	"github.com/hashicorp/go-cleanhttp"
-	"github.com/mitchellh/mapstructure"
 )
 
-// APIKeyEnvVar is the name of the environment variable where the Fastly API
-// key should be read from.
-const APIKeyEnvVar = "FASTLY_API_KEY"
-
-// APIKeyHeader is the name of the header that contains the Fastly API key.
-const APIKeyHeader = "Fastly-Key"
-
-// DefaultEndpoint is the default endpoint for Fastly. Since Fastly does not
+// defaultBaseURL is the default endpoint for Fastly. Since Fastly does not
 // support an on-premise solution, this is likely to always be the default.
-const DefaultEndpoint = "https://api.fastly.com"
+const defaultBaseURL = "https://api.fastly.com/"
 
 // ProjectURL is the url for this library.
-var ProjectURL = "github.com/sethvargo/go-fastly"
+var ProjectURL = "github.com/alienth/go-fastly"
 
 // ProjectVersion is the version of this library.
-var ProjectVersion = "0.2"
+var ProjectVersion = "0.1"
 
 // UserAgent is the user agent for this particular client.
-var UserAgent = fmt.Sprintf("FastlyGo/%s (+%s; %s)",
+var userAgent = fmt.Sprintf("alienth/go-fastly/%s (+%s; %s)",
 	ProjectVersion, ProjectURL, runtime.Version())
 
 // Client is the main entrypoint to the Fastly golang API library.
 type Client struct {
-	// Address is the address of Fastly's API endpoint.
-	Address string
+	client *http.Client
 
-	// HTTPClient is the HTTP client to use. If one is not provided, a default
-	// client will be used.
-	HTTPClient *http.Client
+	// Base URL for API requests.
+	BaseURL *url.URL
 
+	UserAgent string
+
+	common config // Reuse a single struct instead of allocating one for each service on the heap.
+
+	// Configs used for interacting with different parts of the Fastly API
+	ACL            *ACLConfig
+	ACLEntry       *ACLEntryConfig
+	Backend        *BackendConfig
+	CacheSetting   *CacheSettingConfig
+	Condition      *ConditionConfig
+	Dictionary     *DictionaryConfig
+	DictionaryItem *DictionaryItemConfig
+	Diff           *DiffConfig
+	Domain         *DomainConfig
+
+	Gzip           *GzipConfig
+	Header         *HeaderConfig
+	HealthCheck    *HealthCheckConfig
+	RequestSetting *RequestSettingConfig
+	ResponseObject *ResponseObjectConfig
+	S3             *S3Config
+	Service        *ServiceConfig
+	Settings       *SettingsConfig
+	Syslog         *SyslogConfig
+	Version        *VersionConfig
+	VCL            *VCLConfig
 	// apiKey is the Fastly API key to authenticate requests.
 	apiKey string
-
-	// url is the parsed URL from Address
-	url *url.URL
 }
 
-// DefaultClient instantiates a new Fastly API client. This function requires
-// the environment variable `FASTLY_API_KEY` is set and contains a valid API key
-// to authenticate with Fastly.
-func DefaultClient() *Client {
-	client, err := NewClient(os.Getenv(APIKeyEnvVar))
-	if err != nil {
-		panic(err)
+type config struct {
+	client *Client
+}
+
+// NewClient returns a new Fastly API client. If a nil httpClient is provided,
+// http.DefaultClient will be used.
+func NewClient(httpClient *http.Client, key string) *Client {
+	if httpClient == nil {
+		httpClient = http.DefaultClient
 	}
-	return client
+	baseURL, _ := url.Parse(defaultBaseURL)
+
+	c := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent}
+	c.common.client = c
+	c.ACL = (*ACLConfig)(&c.common)
+	c.ACLEntry = (*ACLEntryConfig)(&c.common)
+	c.Backend = (*BackendConfig)(&c.common)
+	c.CacheSetting = (*CacheSettingConfig)(&c.common)
+	c.Condition = (*ConditionConfig)(&c.common)
+	c.Dictionary = (*DictionaryConfig)(&c.common)
+	c.DictionaryItem = (*DictionaryItemConfig)(&c.common)
+	c.Diff = (*DiffConfig)(&c.common)
+	c.Domain = (*DomainConfig)(&c.common)
+
+	c.Gzip = (*GzipConfig)(&c.common)
+	c.Header = (*HeaderConfig)(&c.common)
+	c.HealthCheck = (*HealthCheckConfig)(&c.common)
+	c.RequestSetting = (*RequestSettingConfig)(&c.common)
+	c.ResponseObject = (*ResponseObjectConfig)(&c.common)
+	c.S3 = (*S3Config)(&c.common)
+	c.Service = (*ServiceConfig)(&c.common)
+	c.Settings = (*SettingsConfig)(&c.common)
+	c.Syslog = (*SyslogConfig)(&c.common)
+	c.Version = (*VersionConfig)(&c.common)
+	c.VCL = (*VCLConfig)(&c.common)
+	c.apiKey = key
+	return c
 }
 
-// NewClient creates a new API client with the given key. Because Fastly allows
-// some requests without an API key, this function will not error if the API
-// token is not supplied. Attempts to make a request that requires an API key
-// will return a 403 response.
-func NewClient(key string) (*Client, error) {
-	client := &Client{apiKey: key}
-	return client.init()
-}
-
-func (c *Client) init() (*Client, error) {
-	if len(c.Address) == 0 {
-		c.Address = DefaultEndpoint
-	}
-
-	u, err := url.Parse(c.Address)
-	if err != nil {
-		return nil, err
-	}
-	c.url = u
-
-	if c.HTTPClient == nil {
-		c.HTTPClient = cleanhttp.DefaultClient()
-	}
-
-	return c, nil
-}
-
-// Get issues an HTTP GET request.
-func (c *Client) Get(p string, ro *RequestOptions) (*http.Response, error) {
-	return c.Request("GET", p, ro)
-}
-
-// Head issues an HTTP HEAD request.
-func (c *Client) Head(p string, ro *RequestOptions) (*http.Response, error) {
-	return c.Request("HEAD", p, ro)
-}
-
-// Post issues an HTTP POST request.
-func (c *Client) Post(p string, ro *RequestOptions) (*http.Response, error) {
-	return c.Request("POST", p, ro)
-}
-
-// PostForm issues an HTTP POST request with the given interface form-encoded.
-func (c *Client) PostForm(p string, i interface{}, ro *RequestOptions) (*http.Response, error) {
-	return c.RequestForm("POST", p, i, ro)
-}
-
-// Put issues an HTTP PUT request.
-func (c *Client) Put(p string, ro *RequestOptions) (*http.Response, error) {
-	return c.Request("PUT", p, ro)
-}
-
-// PutForm issues an HTTP PUT request with the given interface form-encoded.
-func (c *Client) PutForm(p string, i interface{}, ro *RequestOptions) (*http.Response, error) {
-	return c.RequestForm("PUT", p, i, ro)
-}
-
-// Delete issues an HTTP DELETE request.
-func (c *Client) Delete(p string, ro *RequestOptions) (*http.Response, error) {
-	return c.Request("DELETE", p, ro)
-}
-
-// Request makes an HTTP request against the HTTPClient using the given verb,
-// Path, and request options.
-func (c *Client) Request(verb, p string, ro *RequestOptions) (*http.Response, error) {
-	req, err := c.RawRequest(verb, p, ro)
+// NewRequest creates an API request. A relative URL can be provided in urlStr,
+// in which case it is resolved relative to the BaseURL of the Client.
+func (c *Client) NewRequest(method, urlStr string, body io.Reader) (*http.Request, error) {
+	rel, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := checkResp(c.HTTPClient.Do(req))
+	u := c.BaseURL.ResolveReference(rel)
+
+	req, err := http.NewRequest(method, u.String(), body)
 	if err != nil {
+		return nil, err
+	}
+
+	if c.UserAgent != "" {
+		req.Header.Set("User-Agent", c.UserAgent)
+	}
+	req.Header.Set("Fastly-Key", c.apiKey)
+	return req, nil
+}
+
+// NewJSONRequest creates an http.Request with a JSON body for use with the
+// fastly API. The item passed in `body` will be Marshalled into JSON.
+func (c *Client) NewJSONRequest(method, urlStr string, body interface{}) (*http.Request, error) {
+	var buf io.ReadWriter
+	if body != nil {
+		buf = new(bytes.Buffer)
+		err := json.NewEncoder(buf).Encode(body)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	req, err := c.NewRequest(method, urlStr, buf)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
+// Do sends an API request and returns the response. The response is JSON
+// decoded and stored in the value pointed to by v, or returned as an error if
+// an API error has occurred.
+func (c *Client) Do(req *http.Request, v interface{}) (*http.Response, error) {
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = CheckResponse(resp)
+	if err != nil {
+		// return response regardless for caller inspection
 		return resp, err
 	}
 
-	return resp, nil
+	if v != nil {
+		err = json.NewDecoder(resp.Body).Decode(v)
+		if err == io.EOF {
+			err = nil // ignore EOF errors caused by empty response body
+		}
+	}
+
+	return resp, err
 }
 
-// RequestForm makes an HTTP request with the given interface being encoded as
-// form data.
-func (c *Client) RequestForm(verb, p string, i interface{}, ro *RequestOptions) (*http.Response, error) {
-	if ro == nil {
-		ro = new(RequestOptions)
+// CheckResponse takes in an HTTP response containing a JSON-encoded error,
+// unmarshals the error, and returns it. Assumes no error if status code is
+// successful.
+func CheckResponse(r *http.Response) error {
+	if c := r.StatusCode; 200 <= c && c <= 299 {
+		return nil
+	}
+	errorResponse := &ErrorResponse{Response: r}
+	data, err := ioutil.ReadAll(r.Body)
+	if err == nil && data != nil {
+		json.Unmarshal(data, errorResponse)
 	}
 
-	if ro.Headers == nil {
-		ro.Headers = make(map[string]string)
-	}
-	ro.Headers["Content-Type"] = "application/x-www-form-urlencoded"
+	// 401 Unauthorized
+	// {"msg":"Provided credentials are missing or invalid"}
+	// 400 Bad Request
+	// {"msg":{"error":"2fa.verify","error_description":"Invalid one-time password."}}
+	// 403 Forbidden
+	// {"msg":"You are not authorized to perform this action"}
 
-	buf := new(bytes.Buffer)
-	if err := form.NewEncoder(buf).DelimitWith('|').Encode(i); err != nil {
-		return nil, err
-	}
-	body := buf.String()
-
-	ro.Body = strings.NewReader(body)
-	ro.BodyLength = int64(len(body))
-
-	return c.Request(verb, p, ro)
+	return errorResponse
 }
 
-// checkResp wraps an HTTP request from the default client and verifies that the
-// request was successful. A non-200 request returns an error formatted to
-// included any validation problems or otherwise.
-func checkResp(resp *http.Response, err error) (*http.Response, error) {
-	// If the err is already there, there was an error higher up the chain, so
-	// just return that.
-	if err != nil {
-		return resp, err
-	}
-
-	switch resp.StatusCode {
-	case 200, 201, 202, 204, 205, 206:
-		return resp, nil
-	default:
-		return resp, NewHTTPError(resp)
-	}
+// ErrorResponse represents the error message sent back from Fastly.
+type ErrorResponse struct {
+	Response *http.Response // The response that held this error
+	Message  string         `json:"msg"`
+	Detail   string         `json:"detail"`
+	//	Message  *struct {
+	//	    Error string  `json:"error,omitempty"`
+	//	    ErrorDescription string  `json:"error_description,omitempty"`
+	//	} `json:"msg"`
 }
 
-// decodeJSON is used to decode an HTTP response body into an interface as JSON.
-func decodeJSON(out interface{}, body io.ReadCloser) error {
-	defer body.Close()
-
-	var parsed interface{}
-	dec := json.NewDecoder(body)
-	if err := dec.Decode(&parsed); err != nil {
-		return err
-	}
-
-	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-		DecodeHook: mapstructure.ComposeDecodeHookFunc(
-			mapToHTTPHeaderHookFunc(),
-			stringToTimeHookFunc(),
-		),
-		WeaklyTypedInput: true,
-		Result:           out,
-	})
-	if err != nil {
-		return err
-	}
-	return decoder.Decode(parsed)
+// Error generates an error message based on an ErrorResponse.
+func (r *ErrorResponse) Error() string {
+	return fmt.Sprintf("%v %v: %d %v %v",
+		r.Response.Request.Method, r.Response.Request.URL,
+		r.Response.StatusCode, r.Message, r.Detail)
 }

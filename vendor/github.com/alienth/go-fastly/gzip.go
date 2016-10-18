@@ -2,18 +2,20 @@ package fastly
 
 import (
 	"fmt"
+	"net/http"
 	"sort"
 )
 
-// Gzip represents an Gzip logging response from the Fastly API.
-type Gzip struct {
-	ServiceID string `mapstructure:"service_id"`
-	Version   string `mapstructure:"version"`
+type GzipConfig config
 
-	Name           string `mapstructure:"name"`
-	ContentTypes   string `mapstructure:"content_types"`
-	Extensions     string `mapstructure:"extensions"`
-	CacheCondition string `mapstructure:"cache_condition"`
+type Gzip struct {
+	ServiceID string `json:"service_id,omitempty"`
+	Version   uint   `json:"version,string,omitempty"`
+
+	CacheCondition string `json:"cache_condition,omitempty"`
+	ContentTypes   string `json:"content_types,omitempty"`
+	Extensions     string `json:"extensions,omitempty"`
+	Name           string `json:"name,omitempty"`
 }
 
 // gzipsByName is a sortable list of gzips.
@@ -26,193 +28,92 @@ func (s gzipsByName) Less(i, j int) bool {
 	return s[i].Name < s[j].Name
 }
 
-// ListGzipsInput is used as input to the ListGzips function.
-type ListGzipsInput struct {
-	// Service is the ID of the service (required).
-	Service string
+// List gzips for a specific service and version.
+func (c *GzipConfig) List(serviceID string, version uint) ([]*Gzip, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/gzip", serviceID, version)
 
-	// Version is the specific configuration version (required).
-	Version string
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	gzips := new([]*Gzip)
+	resp, err := c.client.Do(req, gzips)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	sort.Stable(gzipsByName(*gzips))
+
+	return *gzips, resp, nil
 }
 
-// ListGzips returns the list of gzips for the configuration version.
-func (c *Client) ListGzips(i *ListGzipsInput) ([]*Gzip, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
+// Get fetches a specific gzip by name.
+func (c *GzipConfig) Get(serviceID string, version uint, name string) (*Gzip, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/gzip/%s", serviceID, version, name)
+
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	if i.Version == "" {
-		return nil, ErrMissingVersion
+	gzip := new(Gzip)
+	resp, err := c.client.Do(req, gzip)
+	if err != nil {
+		return nil, resp, err
+	}
+	return gzip, resp, nil
+}
+
+// Create a new gzip.
+func (c *GzipConfig) Create(serviceID string, version uint, gzip *Gzip) (*Gzip, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/gzip", serviceID, version)
+
+	req, err := c.client.NewJSONRequest("POST", u, gzip)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	path := fmt.Sprintf("/service/%s/version/%s/gzip", i.Service, i.Version)
-	resp, err := c.Get(path, nil)
+	b := new(Gzip)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
+}
+
+// Update a gzip
+func (c *GzipConfig) Update(serviceID string, version uint, name string, gzip *Gzip) (*Gzip, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/gzip/%s", serviceID, version, name)
+
+	req, err := c.client.NewJSONRequest("PUT", u, gzip)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	b := new(Gzip)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
+}
+
+// Delete a gzip
+func (c *GzipConfig) Delete(serviceID string, version uint, name string) (*http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/gzip/%s", serviceID, version, name)
+
+	req, err := c.client.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var gzips []*Gzip
-	if err := decodeJSON(&gzips, resp.Body); err != nil {
-		return nil, err
-	}
-	sort.Stable(gzipsByName(gzips))
-	return gzips, nil
-}
-
-// CreateGzipInput is used as input to the CreateGzip function.
-type CreateGzipInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	Name           string `form:"name,omitempty"`
-	ContentTypes   string `form:"content_types"`
-	Extensions     string `form:"extensions"`
-	CacheCondition string `form:"cache_condition,omitempty"`
-}
-
-// CreateGzip creates a new Fastly Gzip.
-func (c *Client) CreateGzip(i *CreateGzipInput) (*Gzip, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/gzip", i.Service, i.Version)
-	resp, err := c.PostForm(path, i, nil)
+	resp, err := c.client.Do(req, nil)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
 
-	var gzip *Gzip
-	if err := decodeJSON(&gzip, resp.Body); err != nil {
-		return nil, err
-	}
-	return gzip, nil
-}
-
-// GetGzipInput is used as input to the GetGzip function.
-type GetGzipInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the Gzip to fetch.
-	Name string
-}
-
-// GetGzip gets the Gzip configuration with the given parameters.
-func (c *Client) GetGzip(i *GetGzipInput) (*Gzip, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return nil, ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/gzip/%s", i.Service, i.Version, i.Name)
-	resp, err := c.Get(path, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var b *Gzip
-	if err := decodeJSON(&b, resp.Body); err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-// UpdateGzipInput is used as input to the UpdateGzip function.
-type UpdateGzipInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the Gzip to update.
-	Name string
-
-	NewName        string `form:"name,omitempty"`
-	ContentTypes   string `form:"content_types,omitempty"`
-	Extensions     string `form:"extensions,omitempty"`
-	CacheCondition string `form:"cache_condition,omitempty"`
-}
-
-// UpdateGzip updates a specific Gzip.
-func (c *Client) UpdateGzip(i *UpdateGzipInput) (*Gzip, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return nil, ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/gzip/%s", i.Service, i.Version, i.Name)
-	resp, err := c.PutForm(path, i, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var b *Gzip
-	if err := decodeJSON(&b, resp.Body); err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-// DeleteGzipInput is the input parameter to DeleteGzip.
-type DeleteGzipInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the Gzip to delete (required).
-	Name string
-}
-
-// DeleteGzip deletes the given Gzip version.
-func (c *Client) DeleteGzip(i *DeleteGzipInput) error {
-	if i.Service == "" {
-		return ErrMissingService
-	}
-
-	if i.Version == "" {
-		return ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/gzip/%s", i.Service, i.Version, i.Name)
-	resp, err := c.Delete(path, nil)
-	if err != nil {
-		return err
-	}
-
-	var r *statusResp
-	if err := decodeJSON(&r, resp.Body); err != nil {
-		return err
-	}
-	if !r.Ok() {
-		return fmt.Errorf("Not Ok")
-	}
-	return nil
+	return resp, nil
 }

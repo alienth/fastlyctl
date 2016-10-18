@@ -2,36 +2,57 @@ package fastly
 
 import (
 	"fmt"
+	"net/http"
 	"sort"
 )
 
+type CacheSettingAction int
+
 const (
-	// CacheSettingActionCache sets the cache to cache.
-	CacheSettingActionCache CacheSettingAction = "cache"
-
-	// CacheSettingActionPass sets the cache to pass through.
-	CacheSettingActionPass CacheSettingAction = "pass"
-
-	// CacheSettingActionRestart sets the cache to restart the request.
-	CacheSettingActionRestart CacheSettingAction = "restart"
+	_                                          = iota
+	CacheSettingActionCache CacheSettingAction = iota
+	CacheSettingActionPass
+	CacheSettingActionRestart
 )
 
-// CacheSettingAction is the type of cache action.
-type CacheSettingAction string
-
-// CacheSetting represents a response from Fastly's API for cache settings.
-type CacheSetting struct {
-	ServiceID string `mapstructure:"service_id"`
-	Version   string `mapstructure:"version"`
-
-	Name           string             `mapstructure:"name"`
-	Action         CacheSettingAction `mapstructure:"action"`
-	TTL            uint               `mapstructure:"ttl"`
-	StaleTTL       uint               `mapstructure:"stale_ttl"`
-	CacheCondition string             `mapstructure:"cache_condition"`
+func (s *CacheSettingAction) UnmarshalText(b []byte) error {
+	switch string(b) {
+	case "pass":
+		*s = CacheSettingActionPass
+	case "cache":
+		*s = CacheSettingActionCache
+	case "restart":
+		*s = CacheSettingActionRestart
+	}
+	return nil
 }
 
-// cacheSettingsByName is a sortable list of cache settings.
+func (s *CacheSettingAction) MarshalText() ([]byte, error) {
+	switch *s {
+	case CacheSettingActionPass:
+		return []byte("pass"), nil
+	case CacheSettingActionCache:
+		return []byte("cache"), nil
+	case CacheSettingActionRestart:
+		return []byte("restart"), nil
+	}
+	return nil, nil
+}
+
+type CacheSettingConfig config
+
+type CacheSetting struct {
+	ServiceID string `json:"service_id,omitempty"`
+	Version   uint   `json:"version,string,omitempty"`
+
+	Name           string             `json:"name,omitempty"`
+	Action         CacheSettingAction `json:"action,omitempty"`
+	CacheCondition string             `json:"cache_condition,omitempty"`
+	StaleTTL       uint               `json:"stale_ttl,string,omitempty"`
+	TTL            uint               `json:"ttl,string,omitempty"`
+}
+
+// cacheSettingsByName is a sortable list of cacheSettings.
 type cacheSettingsByName []*CacheSetting
 
 // Len, Swap, and Less implement the sortable interface.
@@ -41,197 +62,92 @@ func (s cacheSettingsByName) Less(i, j int) bool {
 	return s[i].Name < s[j].Name
 }
 
-// ListCacheSettingsInput is used as input to the ListCacheSettings function.
-type ListCacheSettingsInput struct {
-	// Service is the ID of the service (required).
-	Service string
+// List cacheSettings for a specific service and version.
+func (c *CacheSettingConfig) List(serviceID string, version uint) ([]*CacheSetting, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/cache_settings", serviceID, version)
 
-	// Version is the specific configuration version (required).
-	Version string
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cacheSettings := new([]*CacheSetting)
+	resp, err := c.client.Do(req, cacheSettings)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	sort.Stable(cacheSettingsByName(*cacheSettings))
+
+	return *cacheSettings, resp, nil
 }
 
-// ListCacheSettings returns the list of cache settings for the configuration
-// version.
-func (c *Client) ListCacheSettings(i *ListCacheSettingsInput) ([]*CacheSetting, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
+// Get fetches a specific cache setting by name.
+func (c *CacheSettingConfig) Get(serviceID string, version uint, name string) (*CacheSetting, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/cache_settings/%s", serviceID, version, name)
+
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	if i.Version == "" {
-		return nil, ErrMissingVersion
+	setting := new(CacheSetting)
+	resp, err := c.client.Do(req, setting)
+	if err != nil {
+		return nil, resp, err
+	}
+	return setting, resp, nil
+}
+
+// Create a new cache setting.
+func (c *CacheSettingConfig) Create(serviceID string, version uint, setting *CacheSetting) (*CacheSetting, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/cache_settings", serviceID, version)
+
+	req, err := c.client.NewJSONRequest("POST", u, setting)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	path := fmt.Sprintf("/service/%s/version/%s/cache_settings", i.Service, i.Version)
-	resp, err := c.Get(path, nil)
+	b := new(CacheSetting)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
+}
+
+// Update a cache setting
+func (c *CacheSettingConfig) Update(serviceID string, version uint, name string, setting *CacheSetting) (*CacheSetting, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/cache_settings/%s", serviceID, version, name)
+
+	req, err := c.client.NewJSONRequest("PUT", u, setting)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	b := new(CacheSetting)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
+}
+
+// Delete a cache setting
+func (c *CacheSettingConfig) Delete(serviceID string, version uint, name string) (*http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/cache_settings/%s", serviceID, version, name)
+
+	req, err := c.client.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var cs []*CacheSetting
-	if err := decodeJSON(&cs, resp.Body); err != nil {
-		return nil, err
-	}
-	sort.Stable(cacheSettingsByName(cs))
-	return cs, nil
-}
-
-// CreateCacheSettingInput is used as input to the CreateCacheSetting function.
-type CreateCacheSettingInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	Name           string             `form:"name,omitempty"`
-	Action         CacheSettingAction `form:"action,omitempty"`
-	TTL            uint               `form:"ttl,omitempty"`
-	StaleTTL       uint               `form:"stale_ttl,omitempty"`
-	CacheCondition string             `form:"cache_condition,omitempty"`
-}
-
-// CreateCacheSetting creates a new Fastly cache setting.
-func (c *Client) CreateCacheSetting(i *CreateCacheSettingInput) (*CacheSetting, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/cache_settings", i.Service, i.Version)
-	resp, err := c.PostForm(path, i, nil)
+	resp, err := c.client.Do(req, nil)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
 
-	var cs *CacheSetting
-	if err := decodeJSON(&cs, resp.Body); err != nil {
-		return nil, err
-	}
-	return cs, nil
-}
-
-// GetCacheSettingInput is used as input to the GetCacheSetting function.
-type GetCacheSettingInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the cache setting to fetch.
-	Name string
-}
-
-// GetCacheSetting gets the cache setting configuration with the given
-// parameters.
-func (c *Client) GetCacheSetting(i *GetCacheSettingInput) (*CacheSetting, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return nil, ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/cache_settings/%s", i.Service, i.Version, i.Name)
-	resp, err := c.Get(path, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var cs *CacheSetting
-	if err := decodeJSON(&cs, resp.Body); err != nil {
-		return nil, err
-	}
-	return cs, nil
-}
-
-// UpdateCacheSettingInput is used as input to the UpdateCacheSetting function.
-type UpdateCacheSettingInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the cache setting to update.
-	Name string
-
-	NewName        string             `form:"name,omitempty"`
-	Action         CacheSettingAction `form:"action,omitempty"`
-	TTL            uint               `form:"ttl,omitempty"`
-	StaleTTL       uint               `form:"stale_ttl,omitempty"`
-	CacheCondition string             `form:"cache_condition,omitempty"`
-}
-
-// UpdateCacheSetting updates a specific cache setting.
-func (c *Client) UpdateCacheSetting(i *UpdateCacheSettingInput) (*CacheSetting, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return nil, ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/cache_settings/%s", i.Service, i.Version, i.Name)
-	resp, err := c.PutForm(path, i, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var cs *CacheSetting
-	if err := decodeJSON(&cs, resp.Body); err != nil {
-		return nil, err
-	}
-	return cs, nil
-}
-
-// DeleteCacheSettingInput is the input parameter to DeleteCacheSetting.
-type DeleteCacheSettingInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the cache setting to delete (required).
-	Name string
-}
-
-// DeleteCacheSetting deletes the given cache setting version.
-func (c *Client) DeleteCacheSetting(i *DeleteCacheSettingInput) error {
-	if i.Service == "" {
-		return ErrMissingService
-	}
-
-	if i.Version == "" {
-		return ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/cache_settings/%s", i.Service, i.Version, i.Name)
-	resp, err := c.Delete(path, nil)
-	if err != nil {
-		return err
-	}
-
-	var r *statusResp
-	if err := decodeJSON(&r, resp.Body); err != nil {
-		return err
-	}
-	if !r.Ok() {
-		return fmt.Errorf("Not Ok")
-	}
-	return nil
+	return resp, nil
 }

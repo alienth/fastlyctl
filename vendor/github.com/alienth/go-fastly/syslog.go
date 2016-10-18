@@ -2,27 +2,25 @@ package fastly
 
 import (
 	"fmt"
+	"net/http"
 	"sort"
-	"time"
 )
 
-// Syslog represents a syslog response from the Fastly API.
-type Syslog struct {
-	ServiceID string `mapstructure:"service_id"`
-	Version   string `mapstructure:"version"`
+type SyslogConfig config
 
-	Name              string     `mapstructure:"name"`
-	Address           string     `mapstructure:"address"`
-	Port              uint       `mapstructure:"port"`
-	UseTLS            bool       `mapstructure:"use_tls"`
-	TLSCACert         string     `mapstructure:"tls_ca_cert"`
-	Token             string     `mapstructure:"token"`
-	Format            string     `mapstructure:"format"`
-	TLSHostname       string     `mapstructure:"tls_hostname"`
-	ResponseCondition string     `mapstructure:"response_condition"`
-	CreatedAt         *time.Time `mapstructure:"created_at"`
-	UpdatedAt         *time.Time `mapstructure:"updated_at"`
-	DeletedAt         *time.Time `mapstructure:"deleted_at"`
+type Syslog struct {
+	ServiceID string `json:"service_id,omitempty"`
+	Version   uint   `json:"version,string,omitempty"`
+
+	Name              string      `json:"name,omitempty"`
+	Address           string      `json:"address,omitempty"`
+	Port              uint        `json:"port,string,omitempty"`
+	UseTLS            Compatibool `json:"use_tls,omitempty"`
+	TLSCACert         string      `json:"tls_ca_cert,omitempty"`
+	TLSHostname       string      `json:"tls_hostname,omitempty"`
+	Token             string      `json:"token,omitempty"`
+	Format            string      `json:"format,omitempty"`
+	ResponseCondition string      `json:"response_condition,omitempty"`
 }
 
 // syslogsByName is a sortable list of syslogs.
@@ -35,203 +33,92 @@ func (s syslogsByName) Less(i, j int) bool {
 	return s[i].Name < s[j].Name
 }
 
-// ListSyslogsInput is used as input to the ListSyslogs function.
-type ListSyslogsInput struct {
-	// Service is the ID of the service (required).
-	Service string
+// List syslogs for a specific service and version.
+func (c *SyslogConfig) List(serviceID string, version uint) ([]*Syslog, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/logging/syslog", serviceID, version)
 
-	// Version is the specific configuration version (required).
-	Version string
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	syslogs := new([]*Syslog)
+	resp, err := c.client.Do(req, syslogs)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	sort.Stable(syslogsByName(*syslogs))
+
+	return *syslogs, resp, nil
 }
 
-// ListSyslogs returns the list of syslogs for the configuration version.
-func (c *Client) ListSyslogs(i *ListSyslogsInput) ([]*Syslog, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
+// Get fetches a specific syslog by name.
+func (c *SyslogConfig) Get(serviceID string, version uint, name string) (*Syslog, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/logging/syslog/%s", serviceID, version, name)
+
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	if i.Version == "" {
-		return nil, ErrMissingVersion
+	syslog := new(Syslog)
+	resp, err := c.client.Do(req, syslog)
+	if err != nil {
+		return nil, resp, err
+	}
+	return syslog, resp, nil
+}
+
+// Create a new syslog.
+func (c *SyslogConfig) Create(serviceID string, version uint, syslog *Syslog) (*Syslog, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/logging/syslog", serviceID, version)
+
+	req, err := c.client.NewJSONRequest("POST", u, syslog)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	path := fmt.Sprintf("/service/%s/version/%s/logging/syslog", i.Service, i.Version)
-	resp, err := c.Get(path, nil)
+	b := new(Syslog)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
+}
+
+// Update a syslog
+func (c *SyslogConfig) Update(serviceID string, version uint, name string, syslog *Syslog) (*Syslog, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/logging/syslog/%s", serviceID, version, name)
+
+	req, err := c.client.NewJSONRequest("PUT", u, syslog)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	b := new(Syslog)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
+}
+
+// Delete a syslog
+func (c *SyslogConfig) Delete(serviceID string, version uint, name string) (*http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/logging/syslog/%s", serviceID, version, name)
+
+	req, err := c.client.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var ss []*Syslog
-	if err := decodeJSON(&ss, resp.Body); err != nil {
-		return nil, err
-	}
-	sort.Stable(syslogsByName(ss))
-	return ss, nil
-}
-
-// CreateSyslogInput is used as input to the CreateSyslog function.
-type CreateSyslogInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	Name              string      `form:"name,omitempty"`
-	Address           string      `form:"address,omitempty"`
-	Port              uint        `form:"port,omitempty"`
-	UseTLS            Compatibool `form:"use_tls,omitempty"`
-	TLSCACert         string      `form:"tls_ca_cert,omitempty"`
-	Token             string      `form:"token,omitempty"`
-	Format            string      `form:"format,omitempty"`
-	TLSHostname       string      `form:"tls_hostname"`
-	ResponseCondition string      `form:"response_condition,omitempty"`
-}
-
-// CreateSyslog creates a new Fastly syslog.
-func (c *Client) CreateSyslog(i *CreateSyslogInput) (*Syslog, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/logging/syslog", i.Service, i.Version)
-	resp, err := c.PostForm(path, i, nil)
+	resp, err := c.client.Do(req, nil)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
 
-	var s *Syslog
-	if err := decodeJSON(&s, resp.Body); err != nil {
-		return nil, err
-	}
-	return s, nil
-}
-
-// GetSyslogInput is used as input to the GetSyslog function.
-type GetSyslogInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the syslog to fetch.
-	Name string
-}
-
-// GetSyslog gets the syslog configuration with the given parameters.
-func (c *Client) GetSyslog(i *GetSyslogInput) (*Syslog, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return nil, ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/logging/syslog/%s", i.Service, i.Version, i.Name)
-	resp, err := c.Get(path, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var s *Syslog
-	if err := decodeJSON(&s, resp.Body); err != nil {
-		return nil, err
-	}
-	return s, nil
-}
-
-// UpdateSyslogInput is used as input to the UpdateSyslog function.
-type UpdateSyslogInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the syslog to update.
-	Name string
-
-	NewName           string      `form:"name,omitempty"`
-	Address           string      `form:"address,omitempty"`
-	Port              uint        `form:"port,omitempty"`
-	UseTLS            Compatibool `form:"use_tls,omitempty"`
-	TLSCACert         string      `form:"tls_ca_cert,omitempty"`
-	Token             string      `form:"token,omitempty"`
-	Format            string      `form:"format,omitempty"`
-	TLSHostname       string      `form:"tls_hostname"`
-	ResponseCondition string      `form:"response_condition,omitempty"`
-}
-
-// UpdateSyslog updates a specific syslog.
-func (c *Client) UpdateSyslog(i *UpdateSyslogInput) (*Syslog, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return nil, ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/logging/syslog/%s", i.Service, i.Version, i.Name)
-	resp, err := c.PutForm(path, i, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var s *Syslog
-	if err := decodeJSON(&s, resp.Body); err != nil {
-		return nil, err
-	}
-	return s, nil
-}
-
-// DeleteSyslogInput is the input parameter to DeleteSyslog.
-type DeleteSyslogInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the syslog to delete (required).
-	Name string
-}
-
-// DeleteSyslog deletes the given syslog version.
-func (c *Client) DeleteSyslog(i *DeleteSyslogInput) error {
-	if i.Service == "" {
-		return ErrMissingService
-	}
-
-	if i.Version == "" {
-		return ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/logging/syslog/%s", i.Service, i.Version, i.Name)
-	resp, err := c.Delete(path, nil)
-	if err != nil {
-		return err
-	}
-
-	var r *statusResp
-	if err := decodeJSON(&r, resp.Body); err != nil {
-		return err
-	}
-	if !r.Ok() {
-		return fmt.Errorf("Not Ok")
-	}
-	return nil
+	return resp, nil
 }

@@ -2,30 +2,20 @@ package fastly
 
 import (
 	"fmt"
+	"net/http"
 	"sort"
 )
 
-// Service represents a single service for the Fastly account.
-type Service struct {
-	ID            string     `mapstructure:"id"`
-	Name          string     `mapstructure:"name"`
-	Comment       string     `mapstructure:"comment"`
-	CustomerID    string     `mapstructure:"customer_id"`
-	CreatedAt     string     `mapstructure:"created_at"`
-	UpdatedAt     string     `mapstructure:"updated_at"`
-	DeletedAt     string     `mapstructure:"deleted_at"`
-	ActiveVersion uint       `mapstructure:"version"`
-	Versions      []*Version `mapstructure:"versions"`
-}
+type ServiceConfig config
 
-type ServiceDetail struct {
-	ID            string     `mapstructure:"id"`
-	Name          string     `mapstructure:"name"`
-	Comment       string     `mapstructure:"comment"`
-	CustomerID    string     `mapstructure:"customer_id"`
-	ActiveVersion Version    `mapstructure:"active_version"`
-	Version       Version    `mapstructure:"version"`
-	Versions      []*Version `mapstructure:"versions"`
+type Service struct {
+	ID string `json:"id,omitempty"`
+
+	Version    uint       `json:"version,omitempty"`
+	Name       string     `json:"name,omitempty"`
+	Comment    string     `json:"comment,omitempty"`
+	CustomerID string     `json:"customer_id,omitempty"`
+	Versions   []*Version `json:"versions,omitempty"`
 }
 
 // servicesByName is a sortable list of services.
@@ -38,171 +28,109 @@ func (s servicesByName) Less(i, j int) bool {
 	return s[i].Name < s[j].Name
 }
 
-// ListServicesInput is used as input to the ListServices function.
-type ListServicesInput struct{}
+// List services.
+func (c *ServiceConfig) List() ([]*Service, *http.Response, error) {
+	u := "/service"
 
-// ListServices returns the full list of services for the current account.
-func (c *Client) ListServices(i *ListServicesInput) ([]*Service, error) {
-	resp, err := c.Get("/service", nil)
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	services := new([]*Service)
+	resp, err := c.client.Do(req, services)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	sort.Stable(servicesByName(*services))
+
+	return *services, resp, nil
+}
+
+// Get fetches a specific service by ID.
+func (c *ServiceConfig) Get(serviceID string) (*Service, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s", serviceID)
+
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	service := new(Service)
+	resp, err := c.client.Do(req, service)
+	if err != nil {
+		return nil, resp, err
+	}
+	return service, resp, nil
+}
+
+// Search fetches a specific service by name.
+func (c *ServiceConfig) Search(name string) (*Service, *http.Response, error) {
+	u := fmt.Sprintf("/service/search?name=%s", name)
+
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	service := new(Service)
+	resp, err := c.client.Do(req, service)
+	if err != nil {
+		return nil, resp, err
+	}
+	return service, resp, nil
+}
+
+// Create a new service.
+func (c *ServiceConfig) Create(service *Service) (*Service, *http.Response, error) {
+	u := "/service"
+
+	req, err := c.client.NewJSONRequest("POST", u, service)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	b := new(Service)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
+}
+
+// Update a service
+func (c *ServiceConfig) Update(serviceID string, service *Service) (*Service, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s", serviceID)
+
+	req, err := c.client.NewJSONRequest("PUT", u, service)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	b := new(Service)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
+}
+
+// Delete a service
+func (c *ServiceConfig) Delete(serviceID string) (*http.Response, error) {
+	u := fmt.Sprintf("/service/%s", serviceID)
+
+	req, err := c.client.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var s []*Service
-	if err := decodeJSON(&s, resp.Body); err != nil {
-		return nil, err
-	}
-	sort.Stable(servicesByName(s))
-	return s, nil
-}
-
-// CreateServiceInput is used as input to the CreateService function.
-type CreateServiceInput struct {
-	Name    string `form:"name,omitempty"`
-	Comment string `form:"comment,omitempty"`
-}
-
-// CreateService creates a new service with the given information.
-func (c *Client) CreateService(i *CreateServiceInput) (*Service, error) {
-	resp, err := c.PostForm("/service", i, nil)
+	resp, err := c.client.Do(req, nil)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
 
-	var s *Service
-	if err := decodeJSON(&s, resp.Body); err != nil {
-		return nil, err
-	}
-	return s, nil
-}
-
-// GetServiceInput is used as input to the GetService function.
-type GetServiceInput struct {
-	ID string
-}
-
-// GetService retrieves the service information for the service with the given
-// id. If no service exists for the given id, the API returns a 400 response
-// (not a 404).
-func (c *Client) GetService(i *GetServiceInput) (*Service, error) {
-	if i.ID == "" {
-		return nil, ErrMissingID
-	}
-
-	path := fmt.Sprintf("/service/%s", i.ID)
-	resp, err := c.Get(path, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var s *Service
-	if err := decodeJSON(&s, resp.Body); err != nil {
-		return nil, err
-	}
-
-	return s, nil
-}
-
-// GetService retrieves the details for the service with the given id. If no
-// service exists for the given id, the API returns a 400 response (not a 404).
-func (c *Client) GetServiceDetails(i *GetServiceInput) (*ServiceDetail, error) {
-	if i.ID == "" {
-		return nil, ErrMissingID
-	}
-
-	path := fmt.Sprintf("/service/%s/details", i.ID)
-	resp, err := c.Get(path, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var s *ServiceDetail
-	if err := decodeJSON(&s, resp.Body); err != nil {
-		return nil, err
-	}
-
-	return s, nil
-}
-
-// UpdateServiceInput is used as input to the UpdateService function.
-type UpdateServiceInput struct {
-	ID string
-
-	Name    string `form:"name,omitempty"`
-	Comment string `form:"comment,omitempty"`
-}
-
-// UpdateService updates the service with the given input.
-func (c *Client) UpdateService(i *UpdateServiceInput) (*Service, error) {
-	if i.ID == "" {
-		return nil, ErrMissingID
-	}
-
-	path := fmt.Sprintf("/service/%s", i.ID)
-	resp, err := c.PutForm(path, i, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var s *Service
-	if err := decodeJSON(&s, resp.Body); err != nil {
-		return nil, err
-	}
-	return s, nil
-}
-
-// DeleteServiceInput is used as input to the DeleteService function.
-type DeleteServiceInput struct {
-	ID string
-}
-
-// DeleteService updates the service with the given input.
-func (c *Client) DeleteService(i *DeleteServiceInput) error {
-	if i.ID == "" {
-		return ErrMissingID
-	}
-
-	path := fmt.Sprintf("/service/%s", i.ID)
-	resp, err := c.Delete(path, nil)
-	if err != nil {
-		return err
-	}
-
-	var r *statusResp
-	if err := decodeJSON(&r, resp.Body); err != nil {
-		return err
-	}
-	if !r.Ok() {
-		return fmt.Errorf("Not Ok")
-	}
-	return nil
-}
-
-// SearchServiceInput is used as input to the SearchService function.
-type SearchServiceInput struct {
-	Name string
-}
-
-// SearchService gets a specific service by name. If no service exists by that
-// name, the API returns a 400 response (not a 404).
-func (c *Client) SearchService(i *SearchServiceInput) (*Service, error) {
-	if i.Name == "" {
-		return nil, ErrMissingName
-	}
-
-	resp, err := c.Get("/service/search", &RequestOptions{
-		Params: map[string]string{
-			"name": i.Name,
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	var s *Service
-	if err := decodeJSON(&s, resp.Body); err != nil {
-		return nil, err
-	}
-
-	return s, nil
+	return resp, nil
 }

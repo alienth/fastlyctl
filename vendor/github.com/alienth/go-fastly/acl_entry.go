@@ -1,216 +1,154 @@
 package fastly
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"sort"
 )
 
-// ACLEntry represents a acl entry response from the Fastly API.
-type ACLEntry struct {
-	ServiceID string `mapstructure:"service_id"`
-	ACLID     string `mapstructure:"acl_id"`
+type ACLEntryConfig config
 
-	ID      string `mapstructure:"id"`
-	IP      string `mapstructure:"ip"`
-	Subnet  uint8  `mapstructure:"subnet"`
-	Comment string `mapstructure:"comment"`
-	Negated bool   `mapstructure:"negated"`
+type ACLEntry struct {
+	// Non-writable
+	ServiceID string `json:"service_id"`
+	ID        string `json:"id"`
+	ACLID     string `json:"acl_id"`
+
+	// writable
+	IP      string      `json:"ip"`
+	Subnet  uint8       `json:"subnet"`
+	Comment string      `json:"comment"`
+	Negated Compatibool `json:"negated"`
 }
 
-// aclEntriesByKey is a sortable list of acl entries.
-type aclEntriesByKey []*ACLEntry
+// aclEntriesByName is a sortable list of aclEntries.
+type aclEntriesByIP []*ACLEntry
 
 // Len, Swap, and Less implement the sortable interface.
-func (s aclEntriesByKey) Len() int      { return len(s) }
-func (s aclEntriesByKey) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-func (s aclEntriesByKey) Less(i, j int) bool {
+func (s aclEntriesByIP) Len() int      { return len(s) }
+func (s aclEntriesByIP) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s aclEntriesByIP) Less(i, j int) bool {
 	return s[i].IP < s[j].IP
 }
 
-// ListACLEntriesInput is used as input to the ListACLEntries function.
-type ListACLEntriesInput struct {
-	// Service is the ID of the service (required).
-	Service string
+// List aclEntries for a specific ACL and service.
+func (c *ACLEntryConfig) List(serviceID, aclID string) ([]*ACLEntry, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/acl/%s/entries", serviceID, aclID)
 
-	// ACL is the ID of the acl to retrieve entries for (required).
-	ACL string
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	aclEntries := new([]*ACLEntry)
+	resp, err := c.client.Do(req, aclEntries)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	sort.Stable(aclEntriesByIP(*aclEntries))
+
+	return *aclEntries, resp, nil
 }
 
-// ListACLEntries returns the list of acl entries for the
-// configuration version.
-func (c *Client) ListACLEntries(i *ListACLEntriesInput) ([]*ACLEntry, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
+// Get fetches a specific aclEntry by entryID.
+func (c *ACLEntryConfig) Get(serviceID, aclID, entryID string) (*ACLEntry, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/acl/%s/entry/%s", serviceID, aclID, entryID)
+
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	if i.ACL == "" {
-		return nil, ErrMissingACL
+	aclEntry := new(ACLEntry)
+	resp, err := c.client.Do(req, aclEntry)
+	if err != nil {
+		return nil, resp, err
+	}
+	return aclEntry, resp, nil
+}
+
+// Create a new aclEntry.
+func (c *ACLEntryConfig) Create(serviceID, aclID string, aclEntry *ACLEntry) (*ACLEntry, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/acl/%s/entry", serviceID, aclID)
+
+	req, err := c.client.NewJSONRequest("POST", u, aclEntry)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	path := fmt.Sprintf("/service/%s/acl/%s/entries", i.Service, i.ACL)
-	resp, err := c.Get(path, nil)
+	b := new(ACLEntry)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
+}
+
+// Update a aclEntry
+func (c *ACLEntryConfig) Update(serviceID, aclID, entryID string, aclEntry *ACLEntry) (*ACLEntry, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/acl/%s/entry/%s", serviceID, aclID, entryID)
+
+	req, err := c.client.NewJSONRequest("PATCH", u, aclEntry)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	b := new(ACLEntry)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
+}
+
+// Delete a aclEntry
+func (c *ACLEntryConfig) Delete(serviceID, aclID, entryID string) (*http.Response, error) {
+	u := fmt.Sprintf("/service/%s/acl/%s/entry/%s", serviceID, aclID, entryID)
+
+	req, err := c.client.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var bs []*ACLEntry
-	if err := decodeJSON(&bs, resp.Body); err != nil {
-		return nil, err
+	resp, err := c.client.Do(req, nil)
+	if err != nil {
+		return resp, err
 	}
-	sort.Stable(aclEntriesByKey(bs))
-	return bs, nil
+
+	return resp, nil
 }
 
-// CreateACLEntryInput is used as input to the CreateACLEntry function.
-type CreateACLEntryInput struct {
-	// Service is the ID of the service. ACL is the ID of the acl.
-	// Both fields are required.
-	Service string
-	ACL     string
-
-	IP      string      `form:"ip,omitempty"`
-	Subnet  uint8       `form:"subnet,omitempty"`
-	Comment string      `form:"comment,omitempty"`
-	Negated Compatibool `form:"negated,omitempty"`
+type ACLEntryBatchUpdate struct {
+	Entries []ACLEntryUpdate `json:"entries"`
 }
 
-// CreateACLEntry creates a new Fastly acl entry.
-func (c *Client) CreateACLEntry(i *CreateACLEntryInput) (*ACLEntry, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
+type ACLEntryUpdate struct {
+	Operation BatchOperation `json:"op,omitempty"`
+	ID        string         `json:"id,omitempty"`
+	IP        string         `json:"ip,omitempty"`
+	Subnet    string         `json:"subnet,omitempty"`
+}
 
-	if i.ACL == "" {
-		return nil, ErrMissingACL
-	}
+func (c *ACLEntryConfig) BatchUpdate(serviceID, aclID string, entries []ACLEntryUpdate) (*http.Response, error) {
+	u := fmt.Sprintf("/service/%s/acl/%s/entries", serviceID, aclID)
 
-	path := fmt.Sprintf("/service/%s/acl/%s/entry", i.Service, i.ACL)
-	resp, err := c.PostForm(path, i, nil)
+	var update ACLEntryBatchUpdate
+	update.Entries = entries
+	data, _ := json.Marshal(update)
+	fmt.Println(string(data))
+	req, err := c.client.NewJSONRequest("PATCH", u, update)
 	if err != nil {
 		return nil, err
 	}
 
-	var b *ACLEntry
-	if err := decodeJSON(&b, resp.Body); err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-// GetACLEntryInput is used as input to the GetACLEntry function.
-type GetACLEntryInput struct {
-	// Service is the ID of the service. ACL is the ID of the acl.
-	// Both fields are required.
-	Service string
-	ACL     string
-
-	// ID is the ID of the entry
-	ID string
-}
-
-// GetACLEntry gets the acl entry with the given parameters.
-func (c *Client) GetACLEntry(i *GetACLEntryInput) (*ACLEntry, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.ACL == "" {
-		return nil, ErrMissingACL
-	}
-
-	if i.ID == "" {
-		return nil, ErrMissingACLEntryID
-	}
-
-	path := fmt.Sprintf("/service/%s/acl/%s/entry/%s", i.Service, i.ACL, i.ID)
-	resp, err := c.Get(path, nil)
+	resp, err := c.client.Do(req, nil)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
 
-	var b *ACLEntry
-	if err := decodeJSON(&b, resp.Body); err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-// UpdateACLEntryInput is used as input to the UpdateACLEntry function.
-type UpdateACLEntryInput struct {
-	// Service is the ID of the service. ACL is the ID of the acl.
-	// Both fields are required.
-	Service string
-	ACL     string
-
-	// ID is the id of the acl entry to fetch.
-	ID string
-
-	IP      string      `form:"ip,omitempty"`
-	Subnet  uint8       `form:"subnet,omitempty"`
-	Comment string      `form:"comment,omitempty"`
-	Negated Compatibool `form:"negated,omitempty"`
-}
-
-// UpdateACLEntry updates a specific acl entry.
-func (c *Client) UpdateACLEntry(i *UpdateACLEntryInput) (*ACLEntry, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.ACL == "" {
-		return nil, ErrMissingACL
-	}
-
-	if i.ID == "" {
-		return nil, ErrMissingACLEntryID
-	}
-
-	path := fmt.Sprintf("/service/%s/acl/%s/entry/%s", i.Service, i.ACL, i.ID)
-	resp, err := c.PutForm(path, i, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var b *ACLEntry
-	if err := decodeJSON(&b, resp.Body); err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-// DeleteACLEntryInput is the input parameter to DeleteACLEntry.
-type DeleteACLEntryInput struct {
-	// Service is the ID of the service. ACL is the ID of the acl.
-	// Both fields are required.
-	Service string
-	ACL     string
-
-	// ID is the id of the acl entry to delete.
-	ID string
-}
-
-// DeleteACLEntry deletes the given acl entry.
-func (c *Client) DeleteACLEntry(i *DeleteACLEntryInput) error {
-	if i.Service == "" {
-		return ErrMissingService
-	}
-
-	if i.ACL == "" {
-		return ErrMissingACL
-	}
-
-	if i.ID == "" {
-		return ErrMissingACLEntryID
-	}
-
-	path := fmt.Sprintf("/service/%s/acl/%s/entry/%s", i.Service, i.ACL, i.ID)
-	resp, err := c.Delete(path, nil)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// Unlike other endpoints, the acl endpoint does not return a status
-	// response - it just returns a 200 OK.
-	return nil
+	return resp, nil
 }

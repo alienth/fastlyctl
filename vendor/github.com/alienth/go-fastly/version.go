@@ -2,25 +2,28 @@ package fastly
 
 import (
 	"fmt"
+	"net/http"
 	"sort"
 )
 
-// Version represents a distinct configuration version.
+type VersionConfig config
+
 type Version struct {
-	Number    string `mapstructure:"number"`
-	Comment   string `mapstructure:"comment"`
-	ServiceID string `mapstructure:"service_id"`
-	Active    bool   `mapstructure:"active"`
-	Locked    bool   `mapstructure:"locked"`
-	Deployed  bool   `mapstructure:"deployed"`
-	Staging   bool   `mapstructure:"staging"`
-	Testing   bool   `mapstructure:"testing"`
-	Created   string `mapstructure:"created_at"`
-	Updated   string `mapstructure:"updated_at"`
+	ServiceID string `json:"service_id,omitempty"`
+	Number    uint   `json:"number,omitempty"`
+	Active    bool   `json:"active,omitempty"`
+
+	Comment  string `json:"comment,omitempty"`
+	Deployed bool   `json:"deployed,omitempty"`
+	Locked   bool   `json:"locked,omitempty"`
+	Staging  bool   `json:"staging,omitempty"`
+	Testing  bool   `json:"testing,omitempty"`
+	// TODO type these better
+	Created string `json:"created_at"`
+	Updated string `json:"updated_at"`
 }
 
-// versionsByNumber is a sortable list of versions. This is used by the version
-// `List()` function to sort the API responses.
+// versionsByNumber is a sortable list of versions.
 type versionsByNumber []*Version
 
 // Len, Swap, and Less implement the sortable interface.
@@ -30,308 +33,159 @@ func (s versionsByNumber) Less(i, j int) bool {
 	return s[i].Number < s[j].Number
 }
 
-// ListVersionsInput is the input to the ListVersions function.
-type ListVersionsInput struct {
-	// Service is the ID of the service (required).
-	Service string
-}
+// List versions for a specific service.
+func (c *VersionConfig) List(serviceID string) ([]*Version, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version", serviceID)
 
-// ListVersions returns the full list of all versions of the given service.
-func (c *Client) ListVersions(i *ListVersionsInput) ([]*Version, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	path := fmt.Sprintf("/service/%s/version", i.Service)
-	resp, err := c.Get(path, nil)
+	versions := new([]*Version)
+	resp, err := c.client.Do(req, versions)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	sort.Stable(versionsByNumber(*versions))
+
+	return *versions, resp, nil
+}
+
+// Get fetches a specific version.
+func (c *VersionConfig) Get(serviceID string, versionNumber uint) (*Version, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d", serviceID, versionNumber)
+
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	v := new(Version)
+	resp, err := c.client.Do(req, v)
+	if err != nil {
+		return nil, resp, err
+	}
+	return v, resp, nil
+}
+
+// Validate validates a specific version.
+func (c *VersionConfig) Validate(serviceID string, versionNumber uint) (*http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/validate", serviceID, versionNumber)
+
+	req, err := c.client.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var e []*Version
-	if err := decodeJSON(&e, resp.Body); err != nil {
-		return nil, err
-	}
-	sort.Sort(versionsByNumber(e))
-
-	return e, nil
-}
-
-// LatestVersionInput is the input to the LatestVersion function.
-type LatestVersionInput struct {
-	// Service is the ID of the service (required).
-	Service string
-}
-
-// LatestVersion fetches the latest version. If there are no versions, this
-// function will return nil (but not an error).
-func (c *Client) LatestVersion(i *LatestVersionInput) (*Version, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	list, err := c.ListVersions(&ListVersionsInput{Service: i.Service})
+	resp, err := c.client.Do(req, nil)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
-	if len(list) < 1 {
-		return nil, nil
-	}
-
-	e := list[len(list)-1]
-	return e, nil
+	return resp, nil
 }
 
-// CreateVersionInput is the input to the CreateVersion function.
-type CreateVersionInput struct {
-	// Service is the ID of the service (required).
-	Service string
-}
+// Activate activates a specific version.
+func (c *VersionConfig) Activate(serviceID string, versionNumber uint) (*Version, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/activate", serviceID, versionNumber)
 
-// CreateVersion constructs a new version. There are no request parameters, but
-// you should consult the resulting version number. Note that `CloneVersion` is
-// preferred in almost all scenarios, since `Create()` creates a _blank_
-// configuration where `Clone()` builds off of an existing configuration.
-func (c *Client) CreateVersion(i *CreateVersionInput) (*Version, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	path := fmt.Sprintf("/service/%s/version", i.Service)
-	resp, err := c.Post(path, nil)
+	req, err := c.client.NewRequest("PUT", u, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	var e *Version
-	if err := decodeJSON(&e, resp.Body); err != nil {
-		return nil, err
-	}
-	return e, nil
-}
-
-// GetVersionInput is the input to the GetVersion function.
-type GetVersionInput struct {
-	// Service is the ID of the service (required).
-	Service string
-
-	// Version is the version number to fetch (required).
-	Version string
-}
-
-// GetVersion fetches a version with the given information.
-func (c *Client) GetVersion(i *GetVersionInput) (*Version, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s", i.Service, i.Version)
-	resp, err := c.Get(path, nil)
+	version := new(Version)
+	resp, err := c.client.Do(req, version)
 	if err != nil {
-		return nil, err
+		return nil, resp, err
 	}
-
-	var e *Version
-	if err := decodeJSON(&e, resp.Body); err != nil {
-		return nil, err
-	}
-	return e, nil
+	return version, resp, nil
 }
 
-// UpdateVersionInput is the input to the UpdateVersion function.
-type UpdateVersionInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
+// Deactivate deactivates a specific version.
+func (c *VersionConfig) Deactivate(serviceID string, versionNumber uint) (*Version, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/deactivate", serviceID, versionNumber)
 
-	Comment string `form:"comment,omitempty"`
-}
-
-// UpdateVersion updates the given version
-func (c *Client) UpdateVersion(i *UpdateVersionInput) (*Version, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s", i.Service, i.Version)
-	resp, err := c.PutForm(path, i, nil)
+	req, err := c.client.NewRequest("PUT", u, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	var e *Version
-	if err := decodeJSON(&e, resp.Body); err != nil {
-		return nil, err
-	}
-	return e, nil
-}
-
-// ActivateVersionInput is the input to the ActivateVersion function.
-type ActivateVersionInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-}
-
-// ActivateVersion activates the given version.
-func (c *Client) ActivateVersion(i *ActivateVersionInput) (*Version, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/activate", i.Service, i.Version)
-	resp, err := c.Put(path, nil)
+	version := new(Version)
+	resp, err := c.client.Do(req, version)
 	if err != nil {
-		return nil, err
+		return nil, resp, err
 	}
-
-	var e *Version
-	if err := decodeJSON(&e, resp.Body); err != nil {
-		return nil, err
-	}
-	return e, nil
+	return version, resp, nil
 }
 
-// DeactivateVersionInput is the input to the DeactivateVersion function.
-type DeactivateVersionInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-}
+// Clone clones a specific version into a new version.
+func (c *VersionConfig) Clone(serviceID string, versionNumber uint) (*Version, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/clone", serviceID, versionNumber)
 
-// DeactivateVersion deactivates the given version.
-func (c *Client) DeactivateVersion(i *DeactivateVersionInput) (*Version, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/deactivate", i.Service, i.Version)
-	resp, err := c.Put(path, nil)
+	req, err := c.client.NewRequest("PUT", u, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	var e *Version
-	if err := decodeJSON(&e, resp.Body); err != nil {
-		return nil, err
-	}
-	return e, nil
-}
-
-// CloneVersionInput is the input to the CloneVersion function.
-type CloneVersionInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-}
-
-// CloneVersion creates a clone of the version with and returns a new
-// configuration version with all the same configuration options, but an
-// incremented number.
-func (c *Client) CloneVersion(i *CloneVersionInput) (*Version, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/clone", i.Service, i.Version)
-	resp, err := c.Put(path, nil)
+	version := new(Version)
+	resp, err := c.client.Do(req, version)
 	if err != nil {
-		return nil, err
+		return nil, resp, err
 	}
-
-	var e *Version
-	if err := decodeJSON(&e, resp.Body); err != nil {
-		return nil, err
-	}
-	return e, nil
+	return version, resp, nil
 }
 
-// ValidateVersionInput is the input to the ValidateVersion function.
-type ValidateVersionInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-}
+// Lock locks a specific version.
+func (c *VersionConfig) Lock(serviceID string, versionNumber uint) (*Version, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/lock", serviceID, versionNumber)
 
-// ValidateVersion validates if the given version is okay.
-func (c *Client) ValidateVersion(i *ValidateVersionInput) (bool, string, error) {
-	var msg string
-
-	if i.Service == "" {
-		return false, msg, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return false, msg, ErrMissingVersion
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/validate", i.Service, i.Version)
-	resp, err := c.Get(path, nil)
+	req, err := c.client.NewRequest("PUT", u, nil)
 	if err != nil {
-		return false, msg, err
+		return nil, nil, err
 	}
 
-	var r *statusResp
-	if err := decodeJSON(&r, resp.Body); err != nil {
-		return false, msg, err
-	}
-
-	msg = r.Msg
-	return r.Ok(), msg, nil
-}
-
-// LockVersionInput is the input to the LockVersion function.
-type LockVersionInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-}
-
-// LockVersion locks the specified version.
-func (c *Client) LockVersion(i *LockVersionInput) (*Version, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/lock", i.Service, i.Version)
-	resp, err := c.Put(path, nil)
+	version := new(Version)
+	resp, err := c.client.Do(req, version)
 	if err != nil {
-		return nil, err
+		return nil, resp, err
+	}
+	return version, resp, nil
+}
+
+// Create a new version.
+func (c *VersionConfig) Create(serviceID string) (*Version, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version", serviceID)
+
+	req, err := c.client.NewRequest("POST", u, nil)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	var e *Version
-	if err := decodeJSON(&e, resp.Body); err != nil {
-		return nil, err
+	version := new(Version)
+	resp, err := c.client.Do(req, version)
+	if err != nil {
+		return nil, resp, err
 	}
-	return e, nil
+
+	return version, resp, nil
+}
+
+// Update a version
+func (c *VersionConfig) Update(serviceID string, versionNumber uint, version *Version) (*Version, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d", serviceID, versionNumber)
+
+	req, err := c.client.NewJSONRequest("PUT", u, version)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	b := new(Version)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
 }

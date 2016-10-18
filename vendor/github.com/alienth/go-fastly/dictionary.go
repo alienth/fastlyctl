@@ -2,19 +2,18 @@ package fastly
 
 import (
 	"fmt"
+	"net/http"
 	"sort"
 )
 
-// Dictionary represents a dictionary response from the Fastly API.
-type Dictionary struct {
-	ServiceID string `mapstructure:"service_id"`
-	Version   string `mapstructure:"version"`
+type DictionaryConfig config
 
-	ID      string `mapstructure:"id"`
-	Name    string `mapstructure:"name"`
-	Address string `mapstructure:"address"`
-	Created string `mapstructure:"created_at"`
-	Updated string `mapstructure:"updated_at"`
+type Dictionary struct {
+	ServiceID string `json:"service_id"`
+	Version   uint   `json:"version"`
+	ID        string `json:"id"`
+
+	Name string `json:"name" url:"name,omitempty"`
 }
 
 // dictionariesByName is a sortable list of dictionaries.
@@ -27,183 +26,92 @@ func (s dictionariesByName) Less(i, j int) bool {
 	return s[i].Name < s[j].Name
 }
 
-// ListDictionariesInput is used as input to the ListDictionaries function.
-type ListDictionariesInput struct {
-	// Service is the ID of the service (required).
-	Service string
+// List dictionaries for a specific service and version.
+func (c *DictionaryConfig) List(serviceID string, version uint) ([]*Dictionary, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/dictionary", serviceID, version)
 
-	// Version is the specific configuration version (required).
-	Version string
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	dictionaries := new([]*Dictionary)
+	resp, err := c.client.Do(req, dictionaries)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	sort.Stable(dictionariesByName(*dictionaries))
+
+	return *dictionaries, resp, nil
 }
 
-// ListDictionaries returns the list of dictionaries for the configuration version.
-func (c *Client) ListDictionaries(i *ListDictionariesInput) ([]*Dictionary, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
+// Get fetches a specific dictionary by name.
+func (c *DictionaryConfig) Get(serviceID string, version uint, name string) (*Dictionary, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/dictionary/%s", serviceID, version, name)
+
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	if i.Version == "" {
-		return nil, ErrMissingVersion
+	dictionary := new(Dictionary)
+	resp, err := c.client.Do(req, dictionary)
+	if err != nil {
+		return nil, resp, err
+	}
+	return dictionary, resp, nil
+}
+
+// Create a new dictionary.
+func (c *DictionaryConfig) Create(serviceID string, version uint, dictionary *Dictionary) (*Dictionary, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/dictionary", serviceID, version)
+
+	req, err := c.client.NewJSONRequest("POST", u, dictionary)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	path := fmt.Sprintf("/service/%s/version/%s/dictionary", i.Service, i.Version)
-	resp, err := c.Get(path, nil)
+	b := new(Dictionary)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
+}
+
+// Update a dictionary
+func (c *DictionaryConfig) Update(serviceID string, version uint, name string, dictionary *Dictionary) (*Dictionary, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/dictionary/%s", serviceID, version, name)
+
+	req, err := c.client.NewJSONRequest("PUT", u, dictionary)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	b := new(Dictionary)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
+}
+
+// Delete a dictionary
+func (c *DictionaryConfig) Delete(serviceID string, version uint, name string) (*http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/dictionary/%s", serviceID, version, name)
+
+	req, err := c.client.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var bs []*Dictionary
-	if err := decodeJSON(&bs, resp.Body); err != nil {
-		return nil, err
-	}
-	sort.Stable(dictionariesByName(bs))
-	return bs, nil
-}
-
-// CreateDictionaryInput is used as input to the CreateDictionary function.
-type CreateDictionaryInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	Name string `form:"name,omitempty"`
-}
-
-// CreateDictionary creates a new Fastly dictionary.
-func (c *Client) CreateDictionary(i *CreateDictionaryInput) (*Dictionary, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/dictionary", i.Service, i.Version)
-	resp, err := c.PostForm(path, i, nil)
+	resp, err := c.client.Do(req, nil)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
 
-	var b *Dictionary
-	if err := decodeJSON(&b, resp.Body); err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-// GetDictionaryInput is used as input to the GetDictionary function.
-type GetDictionaryInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the dictionary to fetch.
-	Name string
-}
-
-// GetDictionary gets the dictionary configuration with the given parameters.
-func (c *Client) GetDictionary(i *GetDictionaryInput) (*Dictionary, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return nil, ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/dictionary/%s", i.Service, i.Version, i.Name)
-	resp, err := c.Get(path, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var b *Dictionary
-	if err := decodeJSON(&b, resp.Body); err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-// UpdateDictionaryInput is used as input to the UpdateDictionary function.
-type UpdateDictionaryInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the dictionary to update.
-	Name string
-
-	NewName string `form:"name,omitempty"`
-}
-
-// UpdateDictionary updates a specific dictionary.
-func (c *Client) UpdateDictionary(i *UpdateDictionaryInput) (*Dictionary, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return nil, ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/dictionary/%s", i.Service, i.Version, i.Name)
-	resp, err := c.PutForm(path, i, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var b *Dictionary
-	if err := decodeJSON(&b, resp.Body); err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-// DeleteDictionaryInput is the input parameter to DeleteDictionary.
-type DeleteDictionaryInput struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the dictionary to delete (required).
-	Name string
-}
-
-// DeleteDictionary deletes the given dictionary version.
-func (c *Client) DeleteDictionary(i *DeleteDictionaryInput) error {
-	if i.Service == "" {
-		return ErrMissingService
-	}
-
-	if i.Version == "" {
-		return ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/dictionary/%s", i.Service, i.Version, i.Name)
-	resp, err := c.Delete(path, nil)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// Unlike other endpoints, the dictionary endpoint does not return a status
-	// response - it just returns a 200 OK.
-	return nil
+	return resp, nil
 }

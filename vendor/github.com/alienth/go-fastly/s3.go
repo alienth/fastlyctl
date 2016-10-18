@@ -2,40 +2,30 @@ package fastly
 
 import (
 	"fmt"
+	"net/http"
 	"sort"
-	"time"
 )
 
-type S3Redundancy string
+type S3Config config
 
-const (
-	S3RedundancyStandard S3Redundancy = "standard"
-	S3RedundancyReduced  S3Redundancy = "reduced_redundancy"
-)
-
-// S3 represents a S3 response from the Fastly API.
 type S3 struct {
-	ServiceID string `mapstructure:"service_id"`
-	Version   string `mapstructure:"version"`
+	ServiceID string `json:"service_id,omitempty"`
+	Version   uint   `json:"version,string,omitempty"`
 
-	Name              string       `mapstructure:"name"`
-	BucketName        string       `mapstructure:"bucket_name"`
-	Domain            string       `mapstructure:"domain"`
-	AccessKey         string       `mapstructure:"access_key"`
-	SecretKey         string       `mapstructure:"secret_key"`
-	Path              string       `mapstructure:"path"`
-	Period            uint         `mapstructure:"period"`
-	GzipLevel         uint         `mapstructure:"gzip_level"`
-	Format            string       `mapstructure:"format"`
-	ResponseCondition string       `mapstructure:"response_condition"`
-	TimestampFormat   string       `mapstructure:"timestamp_format"`
-	Redundancy        S3Redundancy `mapstructure:"redundancy"`
-	CreatedAt         *time.Time   `mapstructure:"created_at"`
-	UpdatedAt         *time.Time   `mapstructure:"updated_at"`
-	DeletedAt         *time.Time   `mapstructure:"deleted_at"`
+	Name              string `json:"name,omitempty"`
+	BucketName        string `json:"bucket_name,omitempty"`
+	Domain            string `json:"domain,omitempty"`
+	AccessKey         string `json:"access_key,omitempty"`
+	SecretKey         string `json:"secret_key,omitempty"`
+	Path              string `json:"path,omitempty"`
+	Period            uint   `json:"period,string,omitempty"`
+	GzipLevel         uint   `json:"gzip_level,string,omitempty"`
+	Format            string `json:"format,omitempty"`
+	ResponseCondition string `json:"response_condition,omitempty"`
+	TimestampFormat   string `json:"timestamp_format,omitempty"`
 }
 
-// s3sByName is a sortable list of S3s.
+// s3sByName is a sortable list of s3s.
 type s3sByName []*S3
 
 // Len, Swap, and Less implement the sortable interface.
@@ -45,209 +35,92 @@ func (s s3sByName) Less(i, j int) bool {
 	return s[i].Name < s[j].Name
 }
 
-// ListS3sInput is used as input to the ListS3s function.
-type ListS3sInput struct {
-	// Service is the ID of the service (required).
-	Service string
+// List s3s for a specific service and version.
+func (c *S3Config) List(serviceID string, version uint) ([]*S3, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/logging/s3", serviceID, version)
 
-	// Version is the specific configuration version (required).
-	Version string
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	s3s := new([]*S3)
+	resp, err := c.client.Do(req, s3s)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	sort.Stable(s3sByName(*s3s))
+
+	return *s3s, resp, nil
 }
 
-// ListS3s returns the list of S3s for the configuration version.
-func (c *Client) ListS3s(i *ListS3sInput) ([]*S3, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
+// Get fetches a specific s3 by name.
+func (c *S3Config) Get(serviceID string, version uint, name string) (*S3, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/logging/s3/%s", serviceID, version, name)
+
+	req, err := c.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	if i.Version == "" {
-		return nil, ErrMissingVersion
+	s3 := new(S3)
+	resp, err := c.client.Do(req, s3)
+	if err != nil {
+		return nil, resp, err
+	}
+	return s3, resp, nil
+}
+
+// Create a new s3.
+func (c *S3Config) Create(serviceID string, version uint, s3 *S3) (*S3, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/logging/s3", serviceID, version)
+
+	req, err := c.client.NewJSONRequest("POST", u, s3)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	path := fmt.Sprintf("/service/%s/version/%s/logging/s3", i.Service, i.Version)
-	resp, err := c.Get(path, nil)
+	b := new(S3)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
+}
+
+// Update a s3
+func (c *S3Config) Update(serviceID string, version uint, name string, s3 *S3) (*S3, *http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/logging/s3/%s", serviceID, version, name)
+
+	req, err := c.client.NewJSONRequest("PUT", u, s3)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	b := new(S3)
+	resp, err := c.client.Do(req, b)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return b, resp, nil
+}
+
+// Delete a s3
+func (c *S3Config) Delete(serviceID string, version uint, name string) (*http.Response, error) {
+	u := fmt.Sprintf("/service/%s/version/%d/logging/s3/%s", serviceID, version, name)
+
+	req, err := c.client.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var s3s []*S3
-	if err := decodeJSON(&s3s, resp.Body); err != nil {
-		return nil, err
-	}
-	sort.Stable(s3sByName(s3s))
-	return s3s, nil
-}
-
-// CreateS3Input is used as input to the CreateS3 function.
-type CreateS3Input struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	Name              string       `form:"name,omitempty"`
-	BucketName        string       `form:"bucket_name,omitempty"`
-	Domain            string       `form:"domain"`
-	AccessKey         string       `form:"access_key,omitempty"`
-	SecretKey         string       `form:"secret_key,omitempty"`
-	Path              string       `form:"path,omitempty"`
-	Period            uint         `form:"period,omitempty"`
-	GzipLevel         uint         `form:"gzip_level,omitempty"`
-	Format            string       `form:"format,omitempty"`
-	ResponseCondition string       `form:"response_condition,omitempty"`
-	TimestampFormat   string       `form:"timestamp_format,omitempty"`
-	Redundancy        S3Redundancy `form:"redundancy,omitempty"`
-}
-
-// CreateS3 creates a new Fastly S3.
-func (c *Client) CreateS3(i *CreateS3Input) (*S3, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/logging/s3", i.Service, i.Version)
-	resp, err := c.PostForm(path, i, nil)
+	resp, err := c.client.Do(req, nil)
 	if err != nil {
-		return nil, err
+		return resp, err
 	}
 
-	var s3 *S3
-	if err := decodeJSON(&s3, resp.Body); err != nil {
-		return nil, err
-	}
-	return s3, nil
-}
-
-// GetS3Input is used as input to the GetS3 function.
-type GetS3Input struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the S3 to fetch.
-	Name string
-}
-
-// GetS3 gets the S3 configuration with the given parameters.
-func (c *Client) GetS3(i *GetS3Input) (*S3, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return nil, ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/logging/s3/%s", i.Service, i.Version, i.Name)
-	resp, err := c.Get(path, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var s3 *S3
-	if err := decodeJSON(&s3, resp.Body); err != nil {
-		return nil, err
-	}
-	return s3, nil
-}
-
-// UpdateS3Input is used as input to the UpdateS3 function.
-type UpdateS3Input struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the S3 to update.
-	Name string
-
-	NewName           string       `form:"name,omitempty"`
-	BucketName        string       `form:"bucket_name,omitempty"`
-	Domain            string       `form:"domain"`
-	AccessKey         string       `form:"access_key,omitempty"`
-	SecretKey         string       `form:"secret_key,omitempty"`
-	Path              string       `form:"path,omitempty"`
-	Period            uint         `form:"period,omitempty"`
-	GzipLevel         uint         `form:"gzip_level,omitempty"`
-	Format            string       `form:"format,omitempty"`
-	ResponseCondition string       `form:"response_condition,omitempty"`
-	TimestampFormat   string       `form:"timestamp_format,omitempty"`
-	Redundancy        S3Redundancy `form:"redundancy,omitempty"`
-}
-
-// UpdateS3 updates a specific S3.
-func (c *Client) UpdateS3(i *UpdateS3Input) (*S3, error) {
-	if i.Service == "" {
-		return nil, ErrMissingService
-	}
-
-	if i.Version == "" {
-		return nil, ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return nil, ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/logging/s3/%s", i.Service, i.Version, i.Name)
-	resp, err := c.PutForm(path, i, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var s3 *S3
-	if err := decodeJSON(&s3, resp.Body); err != nil {
-		return nil, err
-	}
-	return s3, nil
-}
-
-// DeleteS3Input is the input parameter to DeleteS3.
-type DeleteS3Input struct {
-	// Service is the ID of the service. Version is the specific configuration
-	// version. Both fields are required.
-	Service string
-	Version string
-
-	// Name is the name of the S3 to delete (required).
-	Name string
-}
-
-// DeleteS3 deletes the given S3 version.
-func (c *Client) DeleteS3(i *DeleteS3Input) error {
-	if i.Service == "" {
-		return ErrMissingService
-	}
-
-	if i.Version == "" {
-		return ErrMissingVersion
-	}
-
-	if i.Name == "" {
-		return ErrMissingName
-	}
-
-	path := fmt.Sprintf("/service/%s/version/%s/logging/s3/%s", i.Service, i.Version, i.Name)
-	resp, err := c.Delete(path, nil)
-	if err != nil {
-		return err
-	}
-
-	var r *statusResp
-	if err := decodeJSON(&r, resp.Body); err != nil {
-		return err
-	}
-	if !r.Ok() {
-		return fmt.Errorf("Not Ok")
-	}
-	return nil
+	return resp, nil
 }
