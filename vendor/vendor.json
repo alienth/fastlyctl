@@ -4,33 +4,38 @@
 	"package": [
 		{
 			"checksumSHA1": "UJTpOZ5IuuyoWFrS42uw/167mn0=",
+			"origin": "github.com/alienth/fastlyctl/vendor/github.com/BurntSushi/toml",
 			"path": "github.com/BurntSushi/toml",
 			"revision": "f0aeabca5a127c4078abb8c8d64298b147264b55",
 			"revisionTime": "2016-04-26T10:16:13Z"
 		},
 		{
 			"checksumSHA1": "LX2ZXV3BRphozD78+CvTGtOpGq0=",
+			"origin": "github.com/alienth/fastlyctl/vendor/github.com/alienth/go-fastly",
 			"path": "github.com/alienth/go-fastly",
 			"revision": "7e7f9247ad6e54b6a83ef3b50040b5e415cea67e",
 			"revisionTime": "2016-10-20T08:10:24Z"
 		},
 		{
 			"checksumSHA1": "hwGdeQbcfc2RvIQS5wAaYRKJDd4=",
+			"origin": "github.com/alienth/fastlyctl/vendor/github.com/imdario/mergo",
 			"path": "github.com/imdario/mergo",
 			"revision": "50d4dbd4eb0e84778abe37cefef140271d96fade",
 			"revisionTime": "2016-05-17T06:44:35Z"
 		},
 		{
 			"checksumSHA1": "hx0Q1JrC6iQDYdkUdGldbzjDMV0=",
+			"origin": "github.com/alienth/fastlyctl/vendor/github.com/urfave/cli",
 			"path": "github.com/urfave/cli",
 			"revision": "1efa31f08b9333f1bd4882d61f9d668a70cd902e",
 			"revisionTime": "2016-06-28T05:30:56Z"
 		},
 		{
-			"checksumSHA1": "bA2gANkJBx2Br/p5GKYdhyGo3Pg=",
+			"checksumSHA1": "y3a1tOZVwKCqG2yJZvAYycnelyM=",
+			"origin": "github.com/alienth/fastlyctl/vendor/golang.org/x/crypto/ssh/terminal",
 			"path": "golang.org/x/crypto/ssh/terminal",
-			"revision": "c10c31b5e94b6f7a0283272dc2bb27163dcea24b",
-			"revisionTime": "2015-05-07T03:01:23Z"
+			"revision": "119f50887f8fe324fe2386421c27a11af014b64e",
+			"revisionTime": "2016-05-18T18:29:53Z"
 		}
 	],
 	"rootPath": "github.com/alienth/fastlyctl"
