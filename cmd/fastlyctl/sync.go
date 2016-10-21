@@ -178,7 +178,7 @@ func syncVCLs(client *fastly.Client, s *fastly.Service, vcls []VCL) error {
 				break
 			} else if vcl.Name == newVCL.Name {
 				log.Debug(fmt.Sprintf("Found mismatched existing vcl %s. Updating.\n", vcl.Name))
-				if _, _, err := client.VCL.Update(s.ID, newversion.Number, vcl.Name, vcl); err != nil {
+				if _, _, err := client.VCL.Update(s.ID, newversion.Number, vcl.Name, &newVCL); err != nil {
 					return err
 				}
 				newVCLs = append(newVCLs[:i], newVCLs[i+1:]...)
@@ -234,7 +234,7 @@ func syncHealthChecks(client *fastly.Client, s *fastly.Service, newHealthChecks 
 				break
 			} else if healthCheck.Name == newHealthCheck.Name {
 				log.Debug(fmt.Sprintf("Found mismatched existing healthCheck %s. Updating.\n", healthCheck.Name))
-				if _, _, err := client.HealthCheck.Update(s.ID, newversion.Number, healthCheck.Name, healthCheck); err != nil {
+				if _, _, err := client.HealthCheck.Update(s.ID, newversion.Number, healthCheck.Name, &newHealthCheck); err != nil {
 					return err
 				}
 				newHealthChecks = append(newHealthChecks[:i], newHealthChecks[i+1:]...)
@@ -285,7 +285,7 @@ func syncGzips(client *fastly.Client, s *fastly.Service, newGzips []fastly.Gzip)
 				break
 			} else if gzip.Name == newGzip.Name {
 				log.Debug(fmt.Sprintf("Found mismatched existing gzip %s. Updating.\n", gzip.Name))
-				if _, _, err := client.Gzip.Update(s.ID, newversion.Number, gzip.Name, gzip); err != nil {
+				if _, _, err := client.Gzip.Update(s.ID, newversion.Number, gzip.Name, &newGzip); err != nil {
 					return err
 				}
 				newGzips = append(newGzips[:i], newGzips[i+1:]...)
@@ -364,7 +364,7 @@ func syncDomains(client *fastly.Client, s *fastly.Service, newDomains []fastly.D
 				break
 			} else if domain.Name == newDomain.Name {
 				log.Debug(fmt.Sprintf("Found mismatched existing domain %s. Updating.\n", domain.Name))
-				if _, _, err := client.Domain.Update(s.ID, newversion.Number, domain.Name, domain); err != nil {
+				if _, _, err := client.Domain.Update(s.ID, newversion.Number, domain.Name, &newDomain); err != nil {
 					return err
 				}
 				newDomains = append(newDomains[:i], newDomains[i+1:]...)
@@ -420,7 +420,7 @@ func syncSyslogs(client *fastly.Client, s *fastly.Service, newSyslogs []fastly.S
 				break
 			} else if syslog.Name == newSyslog.Name {
 				log.Debug(fmt.Sprintf("Found mismatched existing syslog %s. Updating.\n", syslog.Name))
-				if _, _, err := client.Syslog.Update(s.ID, newversion.Number, syslog.Name, syslog); err != nil {
+				if _, _, err := client.Syslog.Update(s.ID, newversion.Number, syslog.Name, &newSyslog); err != nil {
 					return err
 				}
 				newSyslogs = append(newSyslogs[:i], newSyslogs[i+1:]...)
@@ -488,7 +488,7 @@ func syncS3s(client *fastly.Client, s *fastly.Service, newS3s []fastly.S3) error
 				break
 			} else if s3.Name == newS3.Name {
 				log.Debug(fmt.Sprintf("Found mismatched existing s3 %s. Updating.\n", s3.Name))
-				if _, _, err := client.S3.Update(s.ID, newversion.Number, s3.Name, s3); err != nil {
+				if _, _, err := client.S3.Update(s.ID, newversion.Number, s3.Name, &newS3); err != nil {
 					return err
 				}
 				newS3s = append(newS3s[:i], newS3s[i+1:]...)
@@ -538,7 +538,7 @@ func syncHeaders(client *fastly.Client, s *fastly.Service, newHeaders []fastly.H
 				break
 			} else if header.Name == newHeader.Name {
 				log.Debug(fmt.Sprintf("Found mismatched existing header %s. Updating.\n", header.Name))
-				if _, _, err := client.Header.Update(s.ID, newversion.Number, header.Name, header); err != nil {
+				if _, _, err := client.Header.Update(s.ID, newversion.Number, header.Name, &newHeader); err != nil {
 					return err
 				}
 				newHeaders = append(newHeaders[:i], newHeaders[i+1:]...)
@@ -588,7 +588,7 @@ func syncCacheSettings(client *fastly.Client, s *fastly.Service, newCacheSetting
 				break
 			} else if cacheSetting.Name == newCacheSetting.Name {
 				log.Debug(fmt.Sprintf("Found mismatched existing cache setting %s. Updating.\n", cacheSetting.Name))
-				if _, _, err := client.CacheSetting.Update(s.ID, newversion.Number, cacheSetting.Name, cacheSetting); err != nil {
+				if _, _, err := client.CacheSetting.Update(s.ID, newversion.Number, cacheSetting.Name, &newCacheSetting); err != nil {
 					return err
 				}
 				newCacheSettings = append(newCacheSettings[:i], newCacheSettings[i+1:]...)
@@ -638,7 +638,7 @@ func syncConditions(client *fastly.Client, s *fastly.Service, newConditions []fa
 				break
 			} else if condition.Name == newCondition.Name {
 				log.Debug(fmt.Sprintf("Found mismatched existing condition %s. Updating.\n", condition.Name))
-				if _, _, err := client.Condition.Update(s.ID, newversion.Number, condition.Name, condition); err != nil {
+				if _, _, err := client.Condition.Update(s.ID, newversion.Number, condition.Name, &newCondition); err != nil {
 					return err
 				}
 				newConditions = append(newConditions[:i], newConditions[i+1:]...)
@@ -692,7 +692,7 @@ func syncDictionaries(client *fastly.Client, s *fastly.Service, newDictionaries 
 				break
 			} else if dictionary.Name == newDictionary.Name {
 				log.Debug(fmt.Sprintf("Found mismatched existing dictionary %s. Updating.\n", dictionary.Name))
-				if _, _, err := client.Dictionary.Update(s.ID, newversion.Number, dictionary.Name, dictionary); err != nil {
+				if _, _, err := client.Dictionary.Update(s.ID, newversion.Number, dictionary.Name, &newDictionary); err != nil {
 					return changesMade, err
 				}
 				changesMade = true
@@ -749,7 +749,7 @@ func syncACLs(client *fastly.Client, s *fastly.Service, newACLs []fastly.ACL) (b
 				break
 			} else if acl.Name == newACL.Name {
 				log.Debug(fmt.Sprintf("Found mismatched existing acl %s. Updating.\n", acl.Name))
-				if _, _, err := client.ACL.Update(s.ID, newversion.Number, acl.Name, acl); err != nil {
+				if _, _, err := client.ACL.Update(s.ID, newversion.Number, acl.Name, &newACL); err != nil {
 					return changesMade, err
 				}
 				changesMade = true
@@ -810,7 +810,7 @@ func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []fastly
 				break
 			} else if backend.Name == newBackend.Name {
 				log.Debug(fmt.Sprintf("Found mismatched existing backend %s. Updating.\n", backend.Name))
-				if _, _, err := client.Backend.Update(s.ID, newversion.Number, backend.Name, backend); err != nil {
+				if _, _, err := client.Backend.Update(s.ID, newversion.Number, backend.Name, &newBackend); err != nil {
 					return changesMade, err
 				}
 				changesMade = true
