@@ -19,8 +19,8 @@ type Version struct {
 	Staging  bool   `json:"staging,omitempty"`
 	Testing  bool   `json:"testing,omitempty"`
 	// TODO type these better
-	Created string `json:"created_at"`
-	Updated string `json:"updated_at"`
+	Created string `json:"created_at,omitempty"`
+	Updated string `json:"updated_at,omitempty"`
 }
 
 // versionsByNumber is a sortable list of versions.
