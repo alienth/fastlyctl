@@ -122,6 +122,9 @@ func prepareNewVersion(client *fastly.Client, s *fastly.Service) (fastly.Version
 		return *newversion, err
 	}
 	newversion.Comment = versionComment
+	// Zero out unwritable fields
+	newversion.Updated = ""
+	newversion.Created = ""
 	if _, _, err := client.Version.Update(s.ID, newversion.Number, newversion); err != nil {
 		return *newversion, err
 	}
