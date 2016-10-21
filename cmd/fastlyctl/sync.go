@@ -860,52 +860,72 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 	// sync'd first, as if they're referenced in any other object the API
 	// will balk if they don't exist.
 	log.Debug("Syncing Dictionaries\n")
-	if changesMade, err = syncDictionaries(client, s, config.Dictionaries); err != nil {
+	dictionaries := make([]fastly.Dictionary, len(config.Dictionaries))
+	copy(dictionaries, config.Dictionaries)
+	if changesMade, err = syncDictionaries(client, s, dictionaries); err != nil {
 		return fmt.Errorf("Error syncing Dictionaries: %s", err)
 	}
 
 	log.Debug("Syncing ACLs\n")
-	if changesMade, err = syncACLs(client, s, config.ACLs); err != nil {
+	acls := make([]fastly.ACL, len(config.ACLs))
+	copy(acls, config.ACLs)
+	if changesMade, err = syncACLs(client, s, acls); err != nil {
 		return fmt.Errorf("Error syncing ACLs: %s", err)
 	}
 
 	log.Debug("Syncing conditions\n")
-	if err := syncConditions(client, s, config.Conditions); err != nil {
+	conditions := make([]fastly.Condition, len(config.Conditions))
+	copy(conditions, config.Conditions)
+	if err := syncConditions(client, s, conditions); err != nil {
 		return fmt.Errorf("Error syncing conditions: %s", err)
 	}
 
 	log.Debug("Syncing health checks\n")
-	if err := syncHealthChecks(client, s, config.HealthChecks); err != nil {
+	healthChecks := make([]fastly.HealthCheck, len(config.HealthChecks))
+	copy(healthChecks, config.HealthChecks)
+	if err := syncHealthChecks(client, s, healthChecks); err != nil {
 		return fmt.Errorf("Error syncing health checks: %s", err)
 	}
 
 	log.Debug("Syncing cache settings\n")
-	if err := syncCacheSettings(client, s, config.CacheSettings); err != nil {
+	cacheSettings := make([]fastly.CacheSetting, len(config.CacheSettings))
+	copy(cacheSettings, config.CacheSettings)
+	if err := syncCacheSettings(client, s, cacheSettings); err != nil {
 		return fmt.Errorf("Error syncing cache settings: %s", err)
 	}
 
 	log.Debug("Syncing backends\n")
-	if changesMade, err = syncBackends(client, s, config.Backends); err != nil {
+	backends := make([]fastly.Backend, len(config.Backends))
+	copy(backends, config.Backends)
+	if changesMade, err = syncBackends(client, s, backends); err != nil {
 		return fmt.Errorf("Error syncing backends: %s", err)
 	}
 
 	log.Debug("Syncing headers\n")
-	if err := syncHeaders(client, s, config.Headers); err != nil {
+	headers := make([]fastly.Header, len(config.Headers))
+	copy(headers, config.Headers)
+	if err := syncHeaders(client, s, headers); err != nil {
 		return fmt.Errorf("Error syncing headers: %s", err)
 	}
 
 	log.Debug("Syncing syslogs\n")
-	if err := syncSyslogs(client, s, config.Syslogs); err != nil {
+	syslogs := make([]fastly.Syslog, len(config.Syslogs))
+	copy(syslogs, config.Syslogs)
+	if err := syncSyslogs(client, s, syslogs); err != nil {
 		return fmt.Errorf("Error syncing syslogs: %s", err)
 	}
 
 	log.Debug("Syncing S3s\n")
-	if err := syncS3s(client, s, config.S3s); err != nil {
+	s3s := make([]fastly.S3, len(config.S3s))
+	copy(s3s, config.S3s)
+	if err := syncS3s(client, s, s3s); err != nil {
 		return fmt.Errorf("Error syncing s3s: %s", err)
 	}
 
 	log.Debug("Syncing domains\n")
-	if err := syncDomains(client, s, config.Domains); err != nil {
+	domains := make([]fastly.Domain, len(config.Domains))
+	copy(domains, config.Domains)
+	if err := syncDomains(client, s, domains); err != nil {
 		return fmt.Errorf("Error syncing domains: %s", err)
 	}
 
@@ -915,12 +935,16 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 	}
 
 	log.Debug("Syncing gzips\n")
-	if err := syncGzips(client, s, config.Gzips); err != nil {
+	gzips := make([]fastly.Gzip, len(config.Gzips))
+	copy(gzips, config.Gzips)
+	if err := syncGzips(client, s, gzips); err != nil {
 		return fmt.Errorf("Error syncing gzips: %s", err)
 	}
 
 	log.Debug("Syncing VCLs\n")
-	if err := syncVCLs(client, s, config.VCLs); err != nil {
+	vcls := make([]VCL, len(config.VCLs))
+	copy(vcls, config.VCLs)
+	if err := syncVCLs(client, s, vcls); err != nil {
 		return fmt.Errorf("Error syncing VCLs: %s", err)
 	}
 
