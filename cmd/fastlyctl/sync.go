@@ -141,6 +141,9 @@ func syncVCLs(client *fastly.Client, s *fastly.Service, vcls []VCL) error {
 	var newVCLs []fastly.VCL
 
 	for _, vcl := range vcls {
+		if vcl == (VCL{}) {
+			continue
+		}
 		var newVCL fastly.VCL
 		if vcl.File != "" && vcl.Content != "" {
 			return fmt.Errorf("Cannot specify both a File and Content for VCL %s", vcl.Name)
@@ -252,6 +255,9 @@ func syncHealthChecks(client *fastly.Client, s *fastly.Service, newHealthChecks 
 	}
 
 	for _, healthCheck := range newHealthChecks {
+		if healthCheck == (fastly.HealthCheck{}) {
+			continue
+		}
 		log.Debug(fmt.Sprintf("Creating missing healthCheck %s.\n", healthCheck.Name))
 		_, _, err := client.HealthCheck.Create(s.ID, newversion.Number, &healthCheck)
 		if err != nil {
@@ -303,6 +309,9 @@ func syncGzips(client *fastly.Client, s *fastly.Service, newGzips []fastly.Gzip)
 	}
 
 	for _, gzip := range newGzips {
+		if gzip == (fastly.Gzip{}) {
+			continue
+		}
 		log.Debug(fmt.Sprintf("Creating missing gzip %s.\n", gzip.Name))
 		_, _, err := client.Gzip.Create(s.ID, newversion.Number, &gzip)
 		if err != nil {
@@ -382,6 +391,9 @@ func syncDomains(client *fastly.Client, s *fastly.Service, newDomains []fastly.D
 	}
 
 	for _, domain := range newDomains {
+		if domain == (fastly.Domain{}) {
+			continue
+		}
 		log.Debug(fmt.Sprintf("Creating missing domain %s.\n", domain.Name))
 		_, _, err := client.Domain.Create(s.ID, newversion.Number, &domain)
 		if err != nil {
@@ -438,6 +450,9 @@ func syncSyslogs(client *fastly.Client, s *fastly.Service, newSyslogs []fastly.S
 	}
 
 	for _, syslog := range newSyslogs {
+		if syslog == (fastly.Syslog{}) {
+			continue
+		}
 		log.Debug(fmt.Sprintf("Creating missing syslog %s.\n", syslog.Name))
 		_, _, err := client.Syslog.Create(s.ID, newversion.Number, &syslog)
 		if err != nil {
@@ -506,6 +521,9 @@ func syncS3s(client *fastly.Client, s *fastly.Service, newS3s []fastly.S3) error
 	}
 
 	for _, s3 := range newS3s {
+		if s3 == (fastly.S3{}) {
+			continue
+		}
 		log.Debug(fmt.Sprintf("Creating missing s3 %s.\n", s3.Name))
 		_, _, err := client.S3.Create(s.ID, newversion.Number, &s3)
 		if err != nil {
@@ -556,6 +574,9 @@ func syncHeaders(client *fastly.Client, s *fastly.Service, newHeaders []fastly.H
 	}
 
 	for _, header := range newHeaders {
+		if header == (fastly.Header{}) {
+			continue
+		}
 		log.Debug(fmt.Sprintf("Creating missing header %s.\n", header.Name))
 		_, _, err := client.Header.Create(s.ID, newversion.Number, &header)
 		if err != nil {
@@ -606,6 +627,9 @@ func syncCacheSettings(client *fastly.Client, s *fastly.Service, newCacheSetting
 	}
 
 	for _, cacheSetting := range newCacheSettings {
+		if cacheSetting == (fastly.CacheSetting{}) {
+			continue
+		}
 		log.Debug(fmt.Sprintf("Creating missing cache setting %s.\n", cacheSetting.Name))
 		_, _, err := client.CacheSetting.Create(s.ID, newversion.Number, &cacheSetting)
 		if err != nil {
@@ -656,6 +680,9 @@ func syncConditions(client *fastly.Client, s *fastly.Service, newConditions []fa
 	}
 
 	for _, condition := range newConditions {
+		if condition == (fastly.Condition{}) {
+			continue
+		}
 		log.Debug(fmt.Sprintf("Creating missing condition %s.\n", condition.Name))
 		_, _, err := client.Condition.Create(s.ID, newversion.Number, &condition)
 		if err != nil {
@@ -712,6 +739,9 @@ func syncDictionaries(client *fastly.Client, s *fastly.Service, newDictionaries 
 	}
 
 	for _, dictionary := range newDictionaries {
+		if dictionary == (fastly.Dictionary{}) {
+			continue
+		}
 		log.Debug(fmt.Sprintf("Creating missing dictionary %s.\n", dictionary.Name))
 		_, _, err := client.Dictionary.Create(s.ID, newversion.Number, &dictionary)
 		if err != nil {
@@ -769,6 +799,9 @@ func syncACLs(client *fastly.Client, s *fastly.Service, newACLs []fastly.ACL) (b
 	}
 
 	for _, acl := range newACLs {
+		if acl == (fastly.ACL{}) {
+			continue
+		}
 		log.Debug(fmt.Sprintf("Creating missing acl %s.\n", acl.Name))
 		_, _, err := client.ACL.Create(s.ID, newversion.Number, &acl)
 		if err != nil {
@@ -830,6 +863,9 @@ func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []fastly
 	}
 
 	for _, backend := range newBackends {
+		if backend == (fastly.Backend{}) {
+			continue
+		}
 		log.Debug(fmt.Sprintf("Creating missing backend %s.\n", backend.Name))
 		_, _, err := client.Backend.Create(s.ID, newversion.Number, &backend)
 		if err != nil {
