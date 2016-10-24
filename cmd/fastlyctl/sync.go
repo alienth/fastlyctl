@@ -820,10 +820,16 @@ func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []fastly
 	}
 
 	r := strings.NewReplacer("_servicename_", s.Name, "_prefix_", siteConfigs[s.Name].IPPrefix, "_suffix_", siteConfigs[s.Name].IPSuffix)
-	for i := range newBackends {
-		newBackends[i].Address = r.Replace(newBackends[i].Address)
-		newBackends[i].Hostname = r.Replace(newBackends[i].Hostname)
-		newBackends[i].SSLCertHostname = r.Replace(newBackends[i].SSLCertHostname)
+	for i, b := range newBackends {
+		newBackends[i].Address = r.Replace(b.Address)
+		newBackends[i].Hostname = r.Replace(b.Hostname)
+		newBackends[i].SSLCertHostname = r.Replace(b.SSLCertHostname)
+		if b.UseSSL == false {
+			// This is to compensate for an API quirk. If a backend
+			// does not have SSL, this field is always true, and cannot
+			// be changed.
+			newBackends[i].SSLCheckCert = true
+		}
 	}
 
 	existingBackends, _, err := client.Backend.List(s.ID, newversion.Number)
