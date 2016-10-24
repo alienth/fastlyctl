@@ -25,6 +25,8 @@ type Backend struct {
 	RequestCondition    string `json:"request_condition,omitempty"`
 	HealthCheck         string `json:"healthcheck,omitempty"`
 	Hostname            string `json:"hostname,omitempty"`
+	IPV4                string `json:"ipv4,omitempty"` // TODO net.IP type these.
+	IPV6                string `json:"ipv6,omitempty"`
 	UseSSL              bool   `json:"use_ssl,omitempty"`
 	SSLCheckCert        bool   `json:"ssl_check_cert,omitempty"`
 	SSLHostname         string `json:"ssl_hostname,omitempty"`
