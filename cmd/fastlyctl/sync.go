@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"strings"
 
@@ -812,6 +813,28 @@ func syncACLs(client *fastly.Client, s *fastly.Service, newACLs []fastly.ACL) (b
 	return changesMade, nil
 }
 
+// Checks to ensure that only one of the given parameters has a non-zero value.
+// Returns true if the parameters meet this requirement.
+func checkMutuallyExclusive(a, b, c, d string) bool {
+	count := 0
+	if a != "" {
+		count++
+	}
+	if b != "" {
+		count++
+	}
+	if c != "" {
+		count++
+	}
+	if d != "" {
+		count++
+	}
+	if count > 1 {
+		return false
+	}
+	return true
+}
+
 func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []fastly.Backend) (bool, error) {
 	var changesMade bool
 	newversion, err := prepareNewVersion(client, s)
@@ -823,12 +846,41 @@ func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []fastly
 	for i, b := range newBackends {
 		newBackends[i].Address = r.Replace(b.Address)
 		newBackends[i].Hostname = r.Replace(b.Hostname)
+		newBackends[i].IPV4 = r.Replace(b.IPV4)
+		newBackends[i].IPV6 = r.Replace(b.IPV6)
 		newBackends[i].SSLCertHostname = r.Replace(b.SSLCertHostname)
+	}
+	for i, b := range newBackends {
 		if b.UseSSL == false {
 			// This is to compensate for an API quirk. If a backend
 			// does not have SSL, this field is always true, and cannot
 			// be changed.
 			newBackends[i].SSLCheckCert = true
+		}
+		if !checkMutuallyExclusive(b.Address, b.Hostname, b.IPV4, b.IPV6) {
+			return changesMade, fmt.Errorf("Backend %s can only have one of Address, Hostname, IPV4, or IPV6 specified.", b.Name)
+		}
+		// The Address field is automatically filled by the API with
+		// the Hostname, IPV4, or IPV6 value if one of those are
+		// specified. Vice versa is also true. We must duplicate this
+		// logic locally so the comparison works properly.
+		if b.Address != "" {
+			parsed := net.ParseIP(b.Address)
+			if parsed != nil {
+				if strings.Contains(":", parsed.String()) {
+					newBackends[i].IPV6 = parsed.String()
+				} else {
+					newBackends[i].IPV4 = parsed.String()
+				}
+			} else {
+				newBackends[i].Hostname = b.Address
+			}
+		} else if b.Hostname != "" {
+			newBackends[i].Address = b.Hostname
+		} else if b.IPV4 != "" {
+			newBackends[i].Address = b.IPV4
+		} else if b.IPV6 != "" {
+			newBackends[i].Address = b.IPV6
 		}
 	}
 
