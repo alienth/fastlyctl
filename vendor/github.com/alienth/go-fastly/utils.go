@@ -7,6 +7,7 @@ import (
 
 type Compatibool bool
 
+var _ json.Marshaler = new(Compatibool)
 var _ json.Unmarshaler = new(Compatibool)
 
 // Occasionally these bools come down from fastly in '0'/'1', or even 0/1 form.
@@ -15,6 +16,13 @@ func (b *Compatibool) UnmarshalJSON(t []byte) error {
 		*b = Compatibool(true)
 	}
 	return nil
+}
+
+func (b *Compatibool) MarshalJSON() ([]byte, error) {
+	if *b == true {
+		return []byte("1"), nil
+	}
+	return []byte("0"), nil
 }
 
 type BatchOperation int
