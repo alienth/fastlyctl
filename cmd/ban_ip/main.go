@@ -10,7 +10,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-var services []string
+var services []*fastly.Service
 var client *fastly.Client
 
 func main() {
@@ -47,23 +47,26 @@ func main() {
 		if err := util.CheckFastlyKey(c); err != nil {
 			return err
 		}
-		var err error
-		if client, err = fastly.NewClient(c.GlobalString("fastly-key")); err != nil {
-			return err
-		}
+		client = fastly.NewClient(nil, c.GlobalString("fastly-key"))
 
-		services = make([]string, len(c.GlobalStringSlice("service")))
+		serviceNames := c.GlobalStringSlice("service")
 
-		if len(c.GlobalStringSlice("service")) == 0 {
-			results, err := client.ListServices(&fastly.ListServicesInput{})
+		services = make([]*fastly.Service, len(serviceNames))
+
+		if len(serviceNames) == 0 {
+			results, _, err := client.Service.List()
 			if err != nil {
 				return fmt.Errorf("Error fetching service list.")
 			}
-			for _, s := range results {
-				services = append(services, s.Name)
-			}
+			services = results
 		} else {
-			services = c.GlobalStringSlice("service")
+			for i, name := range serviceNames {
+				service, err := util.GetServiceByName(client, name)
+				if err != nil {
+					return fmt.Errorf("Error fetching service %s: %s.", name, err)
+				}
+				services[i] = service
+			}
 		}
 		return nil
 	}
@@ -118,20 +121,27 @@ func banAdd(c *cli.Context) error {
 	if c.String("comment") != "" {
 		value = c.String("comment")
 	}
+
 	for _, service := range services {
+		activeVersion, err := util.GetActiveVersion(service)
+		if err != nil {
+			return cli.NewExitError(fmt.Sprintf("Error finding active version for service %s: %s\n", service.Name, err), -1)
+		}
+		dictionary, _, err := client.Dictionary.Get(service.ID, activeVersion, c.GlobalString("dictionary"))
+		if err != nil {
+			fmt.Printf("Unable to fetch dictionary %s on service %s. Skipping\n", c.GlobalString("dictionary"), service.Name)
+			continue
+		}
+
 		for _, address := range c.Args() {
-			item, err := util.NewDictionaryItem(client, service, c.GlobalString("dictionary"), address, value)
+			item := new(fastly.DictionaryItem)
+			item.Key = address
+			item.Value = value
+			_, _, err := client.DictionaryItem.Create(service.ID, dictionary.ID, item)
 			if err != nil {
-				if err == util.ErrGetDictionary {
-					fmt.Printf("Unable to fetch dictionary %s on service %s. Skipping\n", c.GlobalString("dictionary"), service)
-					continue
-				}
-				return cli.NewExitError(fmt.Sprintf("Error fetching dictionary: %s\n", err), -1)
-			}
-			if err := item.Add(); err != nil {
 				return cli.NewExitError(fmt.Sprintf("Error adding item: %s\n", err), -1)
 			}
-			fmt.Printf("Added address %s to dictionary %s on service %s\n", address, c.GlobalString("dictionary"), service)
+			fmt.Printf("Added address %s to dictionary %s on service %s\n", address, c.GlobalString("dictionary"), service.Name)
 		}
 	}
 
@@ -140,23 +150,26 @@ func banAdd(c *cli.Context) error {
 
 func banRemove(c *cli.Context) error {
 	for _, service := range services {
+		activeVersion, err := util.GetActiveVersion(service)
+		if err != nil {
+			return cli.NewExitError(fmt.Sprintf("Error finding active version for service %s: %s\n", service.Name, err), -1)
+		}
+		dictionary, _, err := client.Dictionary.Get(service.ID, activeVersion, c.GlobalString("dictionary"))
+		if err != nil {
+			fmt.Printf("Unable to fetch dictionary %s on service %s. Skipping\n", c.GlobalString("dictionary"), service.Name)
+			continue
+		}
+
 		for _, address := range c.Args() {
-			item, err := util.NewDictionaryItem(client, service, c.GlobalString("dictionary"), address, "1")
+			resp, err := client.DictionaryItem.Delete(service.ID, dictionary.ID, address)
 			if err != nil {
-				if err == util.ErrGetDictionary {
-					fmt.Printf("Unable to fetch dictionary %s on service %s. Skipping\n", c.GlobalString("dictionary"), service)
-					continue
-				}
-				return cli.NewExitError(fmt.Sprintf("Error fetching dictionary: %s\n", err), -1)
-			}
-			if err := item.Remove(); err != nil {
-				if err == util.ErrNotFound {
-					fmt.Printf("IP %s not found in dictionary %s on service %s. Skipping\n", address, c.GlobalString("dictionary"), service)
+				if resp.StatusCode == 404 {
+					fmt.Printf("IP %s not found in dictionary %s on service %s. Skipping\n", address, c.GlobalString("dictionary"), service.Name)
 					continue
 				}
 				return cli.NewExitError(fmt.Sprintf("Error removing item: %s\n", err), -1)
 			}
-			fmt.Printf("Removed address %s from dictionary %s on service %s\n", address, c.GlobalString("dictionary"), service)
+			fmt.Printf("Removed address %s from dictionary %s on service %s\n", address, c.GlobalString("dictionary"), service.Name)
 		}
 	}
 
@@ -164,21 +177,22 @@ func banRemove(c *cli.Context) error {
 }
 func banList(c *cli.Context) error {
 	for _, service := range services {
-		dictionary, err := util.NewDictionary(client, service, c.GlobalString("dictionary"))
+		activeVersion, err := util.GetActiveVersion(service)
 		if err != nil {
-			if err == util.ErrGetDictionary {
-				fmt.Printf("Unable to fetch dictionary %s on service %s. Skipping\n", c.GlobalString("dictionary"), service)
-				continue
-			}
-			return cli.NewExitError(fmt.Sprintf("Error fetching dictionary: %s\n", err), -1)
+			return cli.NewExitError(fmt.Sprintf("Error finding active version for service %s: %s\n", service.Name, err), -1)
 		}
-		items, err := dictionary.ListItems()
+		dictionary, _, err := client.Dictionary.Get(service.ID, activeVersion, c.GlobalString("dictionary"))
+		if err != nil {
+			fmt.Printf("Unable to fetch dictionary %s on service %s. Skipping\n", c.GlobalString("dictionary"), service.Name)
+			continue
+		}
+		items, _, err := client.DictionaryItem.List(service.ID, dictionary.ID)
 		if err != nil {
 			return cli.NewExitError(fmt.Sprintf("Error listing items: %s\n", err), -1)
 		}
-		fmt.Printf("Banned IP addresses for service %s:\n\n", service)
+		fmt.Printf("Banned IP addresses for service %s:\n\n", service.Name)
 		for _, i := range items {
-			fmt.Println(i.ItemKey, i.ItemValue)
+			fmt.Println(i.Key, i.Value)
 		}
 		fmt.Println("")
 	}

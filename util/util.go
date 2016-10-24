@@ -49,8 +49,8 @@ func GetDictionaryByName(client *fastly.Client, serviceName, dictName string) (*
 // that is currently active for that service.
 func GetActiveVersion(service *fastly.Service) (uint, error) {
 	// Depending on how the service was fetched, it may or may not
-	// have a filled ActiveVersion field.
-	// TODO verify this is still the case
+	// have a filled Version field. For example, services fetched with a
+	// List call do not have their active version in Version.
 	if service.Version != 0 {
 		return service.Version, nil
 	} else {
