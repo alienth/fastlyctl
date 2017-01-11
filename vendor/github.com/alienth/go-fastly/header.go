@@ -102,6 +102,7 @@ type Header struct {
 	RequestCondition  string       `json:"request_condition,omitempty"`
 	ResponseCondition string       `json:"response_condition,omitempty"`
 	Source            string       `json:"src,omitempty"`
+	Destination       string       `json:"dst,omitempty"`
 	Substitution      string       `json:"substitution,omitempty"`
 	Type              HeaderType   `json:"type,omitempty"`
 }

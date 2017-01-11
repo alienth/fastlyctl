@@ -1,7 +1,6 @@
 package fastly
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
@@ -131,6 +130,7 @@ type ACLEntryUpdate struct {
 	ID        string         `json:"id,omitempty"`
 	IP        string         `json:"ip,omitempty"`
 	Subnet    string         `json:"subnet,omitempty"`
+	Comment   string         `json:"comment,omitempty"`
 }
 
 func (c *ACLEntryConfig) BatchUpdate(serviceID, aclID string, entries []ACLEntryUpdate) (*http.Response, error) {
@@ -138,8 +138,6 @@ func (c *ACLEntryConfig) BatchUpdate(serviceID, aclID string, entries []ACLEntry
 
 	var update ACLEntryBatchUpdate
 	update.Entries = entries
-	data, _ := json.Marshal(update)
-	fmt.Println(string(data))
 	req, err := c.client.NewJSONRequest("PATCH", u, update)
 	if err != nil {
 		return nil, err
