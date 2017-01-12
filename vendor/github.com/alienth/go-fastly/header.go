@@ -74,11 +74,11 @@ func (s *HeaderAction) UnmarshalText(b []byte) error {
 func (s *HeaderAction) MarshalText() ([]byte, error) {
 	switch *s {
 	case HeaderActionSet:
-		return []byte("pass"), nil
+		return []byte("set"), nil
 	case HeaderActionAppend:
-		return []byte("cache"), nil
+		return []byte("append"), nil
 	case HeaderActionDelete:
-		return []byte("restart"), nil
+		return []byte("delete"), nil
 	case HeaderActionRegex:
 		return []byte("regex"), nil
 	case HeaderActionRegexRepeat:
