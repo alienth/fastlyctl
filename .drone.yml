@@ -1,0 +1,8 @@
+pipeline:
+  build:
+    image: centos
+    commands:
+      - echo test
+    when:
+      branch: test
+
