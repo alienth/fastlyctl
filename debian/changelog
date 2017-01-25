@@ -1,0 +1,5 @@
+fastlyctl (0.0~git20170112.0.c5132db-1) UNRELEASED; urgency=medium
+
+  * Initial packaging.
+
+ -- Jason Harvey <alienth@gmail.com>  Wed, 25 Jan 2017 04:54:07 +0000

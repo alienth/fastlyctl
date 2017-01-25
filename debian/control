@@ -1,0 +1,29 @@
+Source: fastlyctl
+Section: devel
+Priority: extra
+Maintainer: Debian Go Packaging Team <pkg-go-maintainers@lists.alioth.debian.org>
+Uploaders: root <root@alioth.us>
+Build-Depends: debhelper (>= 9),
+               dh-golang,
+               golang-go
+Standards-Version: 3.9.6
+Homepage: https://github.com/alienth/fastlyctl
+Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/fastlyctl.git
+Vcs-Git: git://anonscm.debian.org/pkg-go/packages/fastlyctl.git
+XS-Go-Import-Path: github.com/alienth/fastlyctl
+
+Package: fastlyctl
+Architecture: any
+Built-Using: ${misc:Built-Using}
+Depends: ${shlibs:Depends},
+         ${misc:Depends}
+Description: 
+ fastlyctl fastlyctl is a utility which can be used to interact with and
+ manage your Fastly service configuration. The most notable subcommand
+ of fastlyctl is push, which can be used to synchronize Fastly settings
+ with definitions in a local config file.
+ .
+ This utility is still in heavy development. It may break your production
+ environment, so please use extreme caution.  Commandspush Use to push
+ remote service configurations with settings defined in a local config
+ file.
