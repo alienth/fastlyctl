@@ -1,4 +1,17 @@
 #!/usr/bin/make -f
 
-%:
-	dh $@ --buildsystem=golang --with=golang
+build-stamp:
+	$(checkdir)
+	-rm -f build-stamp
+	$(MAKE)
+	touch build-stamp
+
+build: build-stamp
+
+clean:
+	$(checkdir)
+	-rm -f build-stamp
+	$(MAKE)
+	touch build-stamp
+
+
