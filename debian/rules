@@ -1,5 +1,27 @@
 #!/usr/bin/make -f
 
+# Name of the package
+package=fastlyctl
+
+# Function to check if we're root
+define checkroot
+	@test $$(id -u) = 0 || (echo need root priviledges; exit 1)
+endef
+
+# Function to check if we're in the correct dir
+define checkdir
+	@test -f debian/rules -a -f roaddemo.cc || \
+	(echo Not in correct source directory; exit 1)
+endef
+
+# Top directory of the source code
+SRCTOP    := $(shell if [ "$$PWD" != "" ]; then echo $$PWD; else pwd; fi)
+# Destination directory where files will be installed
+DESTDIR    = $(SRCTOP)/debian/$(package)
+
+BIN_DIR = $(DESTDIR)/usr/bin
+
+
 build-stamp:
 	$(checkdir)
 	-rm -f build-stamp
@@ -11,7 +33,27 @@ build: build-stamp
 clean:
 	$(checkdir)
 	-rm -f build-stamp
-	$(MAKE)
 	touch build-stamp
+	-rm -rf debian/$(package)
+	-rm -f debian/files
+	-rm -f debian/substvars
 
 
+binary-indep: build
+
+binary-arch: build
+	$(checkdir)
+	$(checkroot)
+	
+	# $(MAKE) install DESTDIR=$(DESTDIR)
+	mkdir -p $(BIN_DIR)
+	cp -a fastlyctl $(BIN_DIR)
+	
+	cd $(DESTDIR) && find . -type f ! -regex '.*DEBIAN/.*' -printf '%P\0' | xargs -r0 md5sum > DEBIAN/md5sums
+
+	dpkg-deb -b $(DESTDIR) ../
+
+binary: binary-indep binary-arch
+
+
+.PHONY: binary binary-arch binary-indep clean build

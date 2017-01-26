@@ -2,10 +2,7 @@ Source: fastlyctl
 Section: devel
 Priority: extra
 Maintainer: Debian Go Packaging Team <pkg-go-maintainers@lists.alioth.debian.org>
-Uploaders: root <root@alioth.us>
-Build-Depends: debhelper (>= 9),
-               dh-golang,
-               golang-go
+Uploaders: Jason Harvey <alienth@gmail.com>
 Standards-Version: 3.9.6
 Homepage: https://github.com/alienth/fastlyctl
 Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/fastlyctl.git
