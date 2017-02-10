@@ -10,7 +10,7 @@ type RequestSettingConfig config
 
 type RequestSetting struct {
 	ServiceID string `json:"service_id,omitempty"`
-	Version   uint   `json:"version,omitempty"`
+	Version   uint   `json:"version,string,omitempty"`
 
 	Name             string      `json:"name,omitempty"`
 	BypassBusyWait   Compatibool `json:"bypass_busy_wait,omitempty"`
@@ -39,7 +39,7 @@ func (s requestSettingsByName) Less(i, j int) bool {
 }
 
 // List requestSettings for a specific service and version.
-func (c *RequestSettingConfig) List(serviceID string, version int) ([]*RequestSetting, *http.Response, error) {
+func (c *RequestSettingConfig) List(serviceID string, version uint) ([]*RequestSetting, *http.Response, error) {
 	u := fmt.Sprintf("/service/%s/version/%d/request_settings", serviceID, version)
 
 	req, err := c.client.NewRequest("GET", u, nil)
@@ -59,7 +59,7 @@ func (c *RequestSettingConfig) List(serviceID string, version int) ([]*RequestSe
 }
 
 // Get fetches a specific request setting by name.
-func (c *RequestSettingConfig) Get(serviceID string, version int, name string) (*RequestSetting, *http.Response, error) {
+func (c *RequestSettingConfig) Get(serviceID string, version uint, name string) (*RequestSetting, *http.Response, error) {
 	u := fmt.Sprintf("/service/%s/version/%d/request_settings/%s", serviceID, version, name)
 
 	req, err := c.client.NewRequest("GET", u, nil)
@@ -76,7 +76,7 @@ func (c *RequestSettingConfig) Get(serviceID string, version int, name string) (
 }
 
 // Create a new request setting.
-func (c *RequestSettingConfig) Create(serviceID string, version int, requestSetting *RequestSetting) (*RequestSetting, *http.Response, error) {
+func (c *RequestSettingConfig) Create(serviceID string, version uint, requestSetting *RequestSetting) (*RequestSetting, *http.Response, error) {
 	u := fmt.Sprintf("/service/%s/version/%d/request_settings", serviceID, version)
 
 	req, err := c.client.NewJSONRequest("POST", u, requestSetting)
@@ -94,7 +94,7 @@ func (c *RequestSettingConfig) Create(serviceID string, version int, requestSett
 }
 
 // Update a request setting
-func (c *RequestSettingConfig) Update(serviceID string, version int, name string, requestSetting *RequestSetting) (*RequestSetting, *http.Response, error) {
+func (c *RequestSettingConfig) Update(serviceID string, version uint, name string, requestSetting *RequestSetting) (*RequestSetting, *http.Response, error) {
 	u := fmt.Sprintf("/service/%s/version/%d/request_settings/%s", serviceID, version, name)
 
 	req, err := c.client.NewJSONRequest("PUT", u, requestSetting)
@@ -112,7 +112,7 @@ func (c *RequestSettingConfig) Update(serviceID string, version int, name string
 }
 
 // Delete a request setting
-func (c *RequestSettingConfig) Delete(serviceID string, version int, name string) (*http.Response, error) {
+func (c *RequestSettingConfig) Delete(serviceID string, version uint, name string) (*http.Response, error) {
 	u := fmt.Sprintf("/service/%s/version/%d/request_settings/%s", serviceID, version, name)
 
 	req, err := c.client.NewRequest("DELETE", u, nil)

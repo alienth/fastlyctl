@@ -10,7 +10,7 @@ type ResponseObjectConfig config
 
 type ResponseObject struct {
 	ServiceID string `json:"service_id,omitempty"`
-	Version   uint   `json:"version,omitempty"`
+	Version   uint   `json:"version,string,omitempty"`
 
 	Name             string `json:"name,omitempty"`
 	CacheCondition   string `json:"cache_condition,omitempty"`
@@ -32,7 +32,7 @@ func (s responseObjectsByName) Less(i, j int) bool {
 }
 
 // List responseObjects for a specific service and version.
-func (c *ResponseObjectConfig) List(serviceID string, version int) ([]*ResponseObject, *http.Response, error) {
+func (c *ResponseObjectConfig) List(serviceID string, version uint) ([]*ResponseObject, *http.Response, error) {
 	u := fmt.Sprintf("/service/%s/version/%d/response_object", serviceID, version)
 
 	req, err := c.client.NewRequest("GET", u, nil)
@@ -52,7 +52,7 @@ func (c *ResponseObjectConfig) List(serviceID string, version int) ([]*ResponseO
 }
 
 // Get fetches a specific response object by name.
-func (c *ResponseObjectConfig) Get(serviceID string, version int, name string) (*ResponseObject, *http.Response, error) {
+func (c *ResponseObjectConfig) Get(serviceID string, version uint, name string) (*ResponseObject, *http.Response, error) {
 	u := fmt.Sprintf("/service/%s/version/%d/response_object/%s", serviceID, version, name)
 
 	req, err := c.client.NewRequest("GET", u, nil)
@@ -69,7 +69,7 @@ func (c *ResponseObjectConfig) Get(serviceID string, version int, name string) (
 }
 
 // Create a new response object.
-func (c *ResponseObjectConfig) Create(serviceID string, version int, responseObject *ResponseObject) (*ResponseObject, *http.Response, error) {
+func (c *ResponseObjectConfig) Create(serviceID string, version uint, responseObject *ResponseObject) (*ResponseObject, *http.Response, error) {
 	u := fmt.Sprintf("/service/%s/version/%d/response_object", serviceID, version)
 
 	req, err := c.client.NewJSONRequest("POST", u, responseObject)
@@ -87,7 +87,7 @@ func (c *ResponseObjectConfig) Create(serviceID string, version int, responseObj
 }
 
 // Update a response object
-func (c *ResponseObjectConfig) Update(serviceID string, version int, name string, responseObject *ResponseObject) (*ResponseObject, *http.Response, error) {
+func (c *ResponseObjectConfig) Update(serviceID string, version uint, name string, responseObject *ResponseObject) (*ResponseObject, *http.Response, error) {
 	u := fmt.Sprintf("/service/%s/version/%d/response_object/%s", serviceID, version, name)
 
 	req, err := c.client.NewJSONRequest("PUT", u, responseObject)
@@ -105,7 +105,7 @@ func (c *ResponseObjectConfig) Update(serviceID string, version int, name string
 }
 
 // Delete a response object
-func (c *ResponseObjectConfig) Delete(serviceID string, version int, name string) (*http.Response, error) {
+func (c *ResponseObjectConfig) Delete(serviceID string, version uint, name string) (*http.Response, error) {
 	u := fmt.Sprintf("/service/%s/version/%d/response_object/%s", serviceID, version, name)
 
 	req, err := c.client.NewRequest("DELETE", u, nil)
