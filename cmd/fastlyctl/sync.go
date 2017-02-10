@@ -36,12 +36,14 @@ type SiteConfig struct {
 	//	GCSs             []fastly.CreateGCSInput
 	//	Papertrails      []fastly.CreatePapertrailInput
 	//	Sumologics       []fastly.CreateSumologicInput
-	Syslogs      []fastly.Syslog
-	Gzips        []fastly.Gzip
-	HealthChecks []fastly.HealthCheck
-	Dictionaries []fastly.Dictionary
-	ACLs         []fastly.ACL
-	VCLs         []VCL
+	Syslogs         []fastly.Syslog
+	Gzips           []fastly.Gzip
+	HealthChecks    []fastly.HealthCheck
+	Dictionaries    []fastly.Dictionary
+	ACLs            []fastly.ACL
+	VCLs            []VCL
+	RequestSettings []fastly.RequestSetting
+	ResponseObject  []fastly.ResponseObject
 
 	IPPrefix string
 	IPSuffix string
@@ -640,6 +642,112 @@ func syncCacheSettings(client *fastly.Client, s *fastly.Service, newCacheSetting
 	return nil
 }
 
+func syncRequestSettings(client *fastly.Client, s *fastly.Service, newRequestSettings []fastly.RequestSetting) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	existingRequestSettings, _, err := client.RequestSetting.List(s.ID, newversion.Number)
+	if err != nil {
+		return err
+	}
+	for _, requestSetting := range existingRequestSettings {
+		var match bool
+		// Zero out read-only fields that we don't want to compare
+		requestSetting.ServiceID = ""
+		requestSetting.Version = 0
+		for i, newRequestSetting := range newRequestSettings {
+			if *requestSetting == newRequestSetting {
+				log.Debug(fmt.Sprintf("Found matching request setting %s. Not creating.\n", requestSetting.Name))
+				newRequestSettings = append(newRequestSettings[:i], newRequestSettings[i+1:]...)
+				match = true
+				break
+			} else if requestSetting.Name == newRequestSetting.Name {
+				log.Debug(fmt.Sprintf("Found mismatched existing request setting %s. Updating.\n", requestSetting.Name))
+				if _, _, err := client.RequestSetting.Update(s.ID, newversion.Number, requestSetting.Name, &newRequestSetting); err != nil {
+					return err
+				}
+				newRequestSettings = append(newRequestSettings[:i], newRequestSettings[i+1:]...)
+				match = true
+				break
+			}
+		}
+		if !match {
+			log.Debug(fmt.Sprintf("Found non-matching request setting %s. Deleting.\n", requestSetting.Name))
+			_, err := client.RequestSetting.Delete(s.ID, newversion.Number, requestSetting.Name)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, requestSetting := range newRequestSettings {
+		if requestSetting == (fastly.RequestSetting{}) {
+			continue
+		}
+		log.Debug(fmt.Sprintf("Creating missing request setting %s.\n", requestSetting.Name))
+		_, _, err := client.RequestSetting.Create(s.ID, newversion.Number, &requestSetting)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func syncResponseObjects(client *fastly.Client, s *fastly.Service, newResponseObjects []fastly.ResponseObject) error {
+	newversion, err := prepareNewVersion(client, s)
+	if err != nil {
+		return err
+	}
+
+	existingResponseObjects, _, err := client.ResponseObject.List(s.ID, newversion.Number)
+	if err != nil {
+		return err
+	}
+	for _, responseObject := range existingResponseObjects {
+		var match bool
+		// Zero out read-only fields that we don't want to compare
+		responseObject.ServiceID = ""
+		responseObject.Version = 0
+		for i, newResponseObject := range newResponseObjects {
+			if *responseObject == newResponseObject {
+				log.Debug(fmt.Sprintf("Found matching response object %s. Not creating.\n", responseObject.Name))
+				newResponseObjects = append(newResponseObjects[:i], newResponseObjects[i+1:]...)
+				match = true
+				break
+			} else if responseObject.Name == newResponseObject.Name {
+				log.Debug(fmt.Sprintf("Found mismatched existing response object %s. Updating.\n", responseObject.Name))
+				if _, _, err := client.ResponseObject.Update(s.ID, newversion.Number, responseObject.Name, &newResponseObject); err != nil {
+					return err
+				}
+				newResponseObjects = append(newResponseObjects[:i], newResponseObjects[i+1:]...)
+				match = true
+				break
+			}
+		}
+		if !match {
+			log.Debug(fmt.Sprintf("Found non-matching response object %s. Deleting.\n", responseObject.Name))
+			_, err := client.ResponseObject.Delete(s.ID, newversion.Number, responseObject.Name)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, responseObject := range newResponseObjects {
+		if responseObject == (fastly.ResponseObject{}) {
+			continue
+		}
+		log.Debug(fmt.Sprintf("Creating missing response object %s.\n", responseObject.Name))
+		_, _, err := client.ResponseObject.Create(s.ID, newversion.Number, &responseObject)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func syncConditions(client *fastly.Client, s *fastly.Service, newConditions []fastly.Condition) error {
 	newversion, err := prepareNewVersion(client, s)
 	if err != nil {
@@ -986,6 +1094,20 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 	copy(cacheSettings, config.CacheSettings)
 	if err := syncCacheSettings(client, s, cacheSettings); err != nil {
 		return fmt.Errorf("Error syncing cache settings: %s", err)
+	}
+
+	log.Debug("Syncing response objects\n")
+	responseObjects := make([]fastly.ResponseObject, len(config.ResponseObject))
+	copy(responseObjects, config.ResponseObject)
+	if err = syncResponseObjects(client, s, responseObjects); err != nil {
+		return fmt.Errorf("Error syncing response objects: %s", err)
+	}
+
+	log.Debug("Syncing request settings\n")
+	requestSettings := make([]fastly.RequestSetting, len(config.RequestSettings))
+	copy(requestSettings, config.RequestSettings)
+	if err = syncRequestSettings(client, s, requestSettings); err != nil {
+		return fmt.Errorf("Error syncing request settings: %s", err)
 	}
 
 	log.Debug("Syncing backends\n")
