@@ -99,8 +99,8 @@ type Header struct {
 	IgnoreIfSet       Compatibool  `json:"ignore_if_set,omitempty"`
 	Priority          uint         `json:"priority,string,omitempty"`
 	Regex             string       `json:"regex,omitempty"`
-	RequestCondition  string       `json:"request_condition,omitempty"`
-	ResponseCondition string       `json:"response_condition,omitempty"`
+	RequestCondition  string       `json:"request_condition"`
+	ResponseCondition string       `json:"response_condition"`
 	Source            string       `json:"src,omitempty"`
 	Destination       string       `json:"dst,omitempty"`
 	Substitution      string       `json:"substitution,omitempty"`

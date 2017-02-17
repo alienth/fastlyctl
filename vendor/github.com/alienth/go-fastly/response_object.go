@@ -13,12 +13,12 @@ type ResponseObject struct {
 	Version   uint   `json:"version,string,omitempty"`
 
 	Name             string `json:"name,omitempty"`
-	CacheCondition   string `json:"cache_condition,omitempty"`
-	Content          string `json:"content,omitempty"`
+	CacheCondition   string `json:"cache_condition"`
+	Content          string `json:"content"`
 	ContentType      string `json:"content_type,omitempty"`
 	Status           string `json:"status,omitempty"`
 	Response         string `json:"response,omitempty"`
-	RequestCondition string `json:"request_condition,omitempty"`
+	RequestCondition string `json:"request_condition"`
 }
 
 // responseObjectsByName is a sortable list of responseObjects.
