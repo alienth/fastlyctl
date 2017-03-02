@@ -959,12 +959,6 @@ func syncBackends(client *fastly.Client, s *fastly.Service, newBackends []fastly
 		newBackends[i].SSLCertHostname = r.Replace(b.SSLCertHostname)
 	}
 	for i, b := range newBackends {
-		if b.UseSSL == false {
-			// This is to compensate for an API quirk. If a backend
-			// does not have SSL, this field is always true, and cannot
-			// be changed.
-			newBackends[i].SSLCheckCert = true
-		}
 		if !checkMutuallyExclusive(b.Address, b.Hostname, b.IPV4, b.IPV6) {
 			return changesMade, fmt.Errorf("Backend %s can only have one of Address, Hostname, IPV4, or IPV6 specified.", b.Name)
 		}
