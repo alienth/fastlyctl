@@ -15,9 +15,9 @@ type ResponseObject struct {
 	Name             string `json:"name,omitempty"`
 	CacheCondition   string `json:"cache_condition"`
 	Content          string `json:"content"`
-	ContentType      string `json:"content_type,omitempty"`
+	ContentType      string `json:"content_type"`
 	Status           string `json:"status,omitempty"`
-	Response         string `json:"response,omitempty"`
+	Response         string `json:"response"`
 	RequestCondition string `json:"request_condition"`
 }
 

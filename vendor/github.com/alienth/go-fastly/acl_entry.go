@@ -10,13 +10,13 @@ type ACLEntryConfig config
 
 type ACLEntry struct {
 	// Non-writable
-	ServiceID string `json:"service_id"`
-	ID        string `json:"id"`
-	ACLID     string `json:"acl_id"`
+	ServiceID string `json:"service_id,omitempty"`
+	ID        string `json:"id,omitempty"`
+	ACLID     string `json:"acl_id,omitempty"`
 
 	// writable
 	IP      string      `json:"ip"`
-	Subnet  uint8       `json:"subnet"`
+	Subnet  uint8       `json:"subnet,omitempty"` // Optional
 	Comment string      `json:"comment"`
 	Negated Compatibool `json:"negated"`
 }
@@ -129,8 +129,8 @@ type ACLEntryUpdate struct {
 	Operation BatchOperation `json:"op,omitempty"`
 	ID        string         `json:"id,omitempty"`
 	IP        string         `json:"ip,omitempty"`
-	Subnet    string         `json:"subnet,omitempty"`
-	Comment   string         `json:"comment,omitempty"`
+	Subnet    string         `json:"subnet,omitempty"` // Optional
+	Comment   string         `json:"comment"`
 }
 
 func (c *ACLEntryConfig) BatchUpdate(serviceID, aclID string, entries []ACLEntryUpdate) (*http.Response, error) {

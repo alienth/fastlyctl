@@ -9,9 +9,9 @@ import (
 type ACLConfig config
 
 type ACL struct {
-	ServiceID string `json:"service_id"`
-	Version   uint   `json:"version,string"`
-	ID        string `json:"id"`
+	ServiceID string `json:"service_id,omitempty"`
+	Version   uint   `json:"version,string,omitempty"`
+	ID        string `json:"id,omitempty"`
 
 	Name string `json:"name" url:"name,omitempty"`
 }

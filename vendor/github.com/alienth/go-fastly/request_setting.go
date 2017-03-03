@@ -13,19 +13,19 @@ type RequestSetting struct {
 	Version   uint   `json:"version,string,omitempty"`
 
 	Name             string      `json:"name,omitempty"`
-	BypassBusyWait   Compatibool `json:"bypass_busy_wait,omitempty"`
-	DefaultHost      string      `json:"default_host,omitempty"`
-	ForceMiss        Compatibool `json:"force_miss,omitempty"`
-	ForceSSL         Compatibool `json:"force_ssl,omitempty"`
-	GeoHeaders       Compatibool `json:"geo_headers,omitempty"`
-	HashKeys         string      `json:"hash_keys,omitempty"`
-	MaxStaleAge      int         `json:"max_stale_age,string,omitempty"`
-	RequestCondition string      `json:"request_condition,omitempty"`
-	TimerSupport     Compatibool `json:"timer_support,omitempty"`
+	BypassBusyWait   Compatibool `json:"bypass_busy_wait"`
+	DefaultHost      string      `json:"default_host"`
+	ForceMiss        Compatibool `json:"force_miss"`
+	ForceSSL         Compatibool `json:"force_ssl"`
+	GeoHeaders       Compatibool `json:"geo_headers"`
+	HashKeys         string      `json:"hash_keys"`
+	MaxStaleAge      int         `json:"max_stale_age,string"`
+	RequestCondition string      `json:"request_condition"`
+	TimerSupport     Compatibool `json:"timer_support"`
 
 	// Takes specific string values
 	XFF    string `json:"xff,omitempty"`
-	Action string `json:"action,omitempty"`
+	Action string `json:"action"`
 }
 
 // requestSettingsByName is a sortable list of requestSettings.

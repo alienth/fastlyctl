@@ -16,8 +16,8 @@ type DictionaryItem struct {
 	DictionaryID string `json:"dictionary_id"`
 
 	// writable
-	Key   string `json:"item_key,omitempty"`
-	Value string `json:"item_value,omitempty"`
+	Key   string `json:"item_key"`
+	Value string `json:"item_value"`
 }
 
 // dictionaryItemsByName is a sortable list of dictionaryItems.
@@ -126,8 +126,8 @@ type DictionaryItemBatchUpdate struct {
 
 type DictionaryItemUpdate struct {
 	Operation BatchOperation `json:"op,omitempty"`
-	Key       string         `json:"item_key,omitempty"`
-	Value     string         `json:"item_value,omitempty"`
+	Key       string         `json:"item_key"`
+	Value     string         `json:"item_value"`
 }
 
 func (c *DictionaryItemConfig) BatchUpdate(serviceID, dictionaryID string, items []DictionaryItemUpdate) (*http.Response, error) {

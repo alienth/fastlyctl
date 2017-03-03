@@ -13,7 +13,7 @@ type Version struct {
 	Number    uint   `json:"number,omitempty"`
 	Active    bool   `json:"active,omitempty"`
 
-	Comment  string `json:"comment,omitempty"`
+	Comment  string `json:"comment"`
 	Deployed bool   `json:"deployed,omitempty"`
 	Locked   bool   `json:"locked,omitempty"`
 	Staging  bool   `json:"staging,omitempty"`

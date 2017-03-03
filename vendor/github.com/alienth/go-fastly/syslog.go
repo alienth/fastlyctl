@@ -15,12 +15,12 @@ type Syslog struct {
 	Name              string      `json:"name,omitempty"`
 	Address           string      `json:"address,omitempty"`
 	Port              uint        `json:"port,string,omitempty"`
-	UseTLS            Compatibool `json:"use_tls,omitempty"`
-	TLSCACert         string      `json:"tls_ca_cert,omitempty"`
-	TLSHostname       string      `json:"tls_hostname,omitempty"`
-	Token             string      `json:"token,omitempty"`
-	Format            string      `json:"format,omitempty"`
-	ResponseCondition string      `json:"response_condition,omitempty"`
+	UseTLS            Compatibool `json:"use_tls"`
+	TLSCACert         string      `json:"tls_ca_cert"`
+	TLSHostname       string      `json:"tls_hostname"`
+	Token             string      `json:"token"`
+	Format            string      `json:"format"`
+	ResponseCondition string      `json:"response_condition"`
 }
 
 // syslogsByName is a sortable list of syslogs.

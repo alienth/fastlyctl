@@ -13,8 +13,8 @@ type VCL struct {
 	Version   uint   `json:"version,omitempty"`
 
 	Name    string `json:"name,omitempty"`
-	Content string `json:"content,omitempty"`
-	Main    bool   `json:"main,omitempty"`
+	Content string `json:"content"`
+	Main    bool   `json:"main"`
 }
 
 // vclsByName is a sortable list of vcls.

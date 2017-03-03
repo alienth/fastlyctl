@@ -12,8 +12,8 @@ type Gzip struct {
 	ServiceID string `json:"service_id,omitempty"`
 	Version   uint   `json:"version,string,omitempty"`
 
-	CacheCondition string `json:"cache_condition,omitempty"`
-	ContentTypes   string `json:"content_types,omitempty"`
+	CacheCondition string `json:"cache_condition"`
+	ContentTypes   string `json:"content_types"`
 	Extensions     string `json:"extensions,omitempty"`
 	Name           string `json:"name,omitempty"`
 }

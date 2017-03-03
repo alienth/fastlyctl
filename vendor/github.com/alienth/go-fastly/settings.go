@@ -12,7 +12,7 @@ type Settings struct {
 	Version   uint   `json:"version,omitempty"`
 
 	DefaultTTL  uint   `json:"general.default_ttl,omitempty"`
-	DefaultHost string `json:"general.default_host,omitempty"`
+	DefaultHost string `json:"general.default_host"`
 }
 
 // Get settings

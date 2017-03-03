@@ -47,9 +47,9 @@ type CacheSetting struct {
 
 	Name           string             `json:"name,omitempty"`
 	Action         CacheSettingAction `json:"action,omitempty"`
-	CacheCondition string             `json:"cache_condition,omitempty"`
-	StaleTTL       uint               `json:"stale_ttl,string,omitempty"`
-	TTL            uint               `json:"ttl,string,omitempty"`
+	CacheCondition string             `json:"cache_condition"`
+	StaleTTL       uint               `json:"stale_ttl,string"`
+	TTL            uint               `json:"ttl,string"`
 }
 
 // cacheSettingsByName is a sortable list of cacheSettings.

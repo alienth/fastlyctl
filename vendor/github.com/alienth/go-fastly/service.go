@@ -13,7 +13,7 @@ type Service struct {
 
 	Version    uint       `json:"version,omitempty"`
 	Name       string     `json:"name,omitempty"`
-	Comment    string     `json:"comment,omitempty"`
+	Comment    string     `json:"comment"`
 	CustomerID string     `json:"customer_id,omitempty"`
 	Versions   []*Version `json:"versions,omitempty"`
 }

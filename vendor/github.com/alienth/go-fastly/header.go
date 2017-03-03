@@ -95,15 +95,15 @@ type Header struct {
 
 	Name              string       `json:"name,omitempty"`
 	Action            HeaderAction `json:"action,omitempty"`
-	CacheCondition    string       `json:"cache_condition,omitempty"`
-	IgnoreIfSet       Compatibool  `json:"ignore_if_set,omitempty"`
+	CacheCondition    string       `json:"cache_condition"`
+	IgnoreIfSet       Compatibool  `json:"ignore_if_set"`
 	Priority          uint         `json:"priority,string,omitempty"`
-	Regex             string       `json:"regex,omitempty"`
+	Regex             string       `json:"regex"`
 	RequestCondition  string       `json:"request_condition"`
 	ResponseCondition string       `json:"response_condition"`
 	Source            string       `json:"src,omitempty"`
 	Destination       string       `json:"dst,omitempty"`
-	Substitution      string       `json:"substitution,omitempty"`
+	Substitution      string       `json:"substitution"`
 	Type              HeaderType   `json:"type,omitempty"`
 }
 

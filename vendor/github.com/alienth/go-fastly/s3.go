@@ -14,15 +14,16 @@ type S3 struct {
 
 	Name              string `json:"name,omitempty"`
 	BucketName        string `json:"bucket_name,omitempty"`
-	Domain            string `json:"domain,omitempty"`
+	Domain            string `json:"domain"`
 	AccessKey         string `json:"access_key,omitempty"`
 	SecretKey         string `json:"secret_key,omitempty"`
-	Path              string `json:"path,omitempty"`
+	Path              string `json:"path"`
 	Period            uint   `json:"period,string,omitempty"`
-	GzipLevel         uint   `json:"gzip_level,string,omitempty"`
-	Format            string `json:"format,omitempty"`
-	ResponseCondition string `json:"response_condition,omitempty"`
-	TimestampFormat   string `json:"timestamp_format,omitempty"`
+	GzipLevel         uint   `json:"gzip_level,string"`
+	Format            string `json:"format"`
+	ResponseCondition string `json:"response_condition"`
+	TimestampFormat   string `json:"timestamp_format"`
+	Redundancy        string `json:"redundancy"`
 }
 
 // s3sByName is a sortable list of s3s.

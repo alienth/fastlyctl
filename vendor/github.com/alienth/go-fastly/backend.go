@@ -13,31 +13,35 @@ type Backend struct {
 	Version   uint   `json:"version,omitempty"`
 
 	Name                string `json:"name,omitempty"`
-	Address             string `json:"address,omitempty"`
 	Port                uint   `json:"port,omitempty"`
 	ConnectTimeout      uint   `json:"connect_timeout,omitempty"`
 	MaxConn             uint   `json:"max_conn,omitempty"`
-	ErrorThreshold      uint   `json:"error_threshold,omitempty"`
+	ErrorThreshold      uint   `json:"error_threshold"`
 	FirstByteTimeout    uint   `json:"first_byte_timeout,omitempty"`
 	BetweenBytesTimeout uint   `json:"between_bytes_timeout,omitempty"`
-	AutoLoadbalance     bool   `json:"auto_loadbalance,omitempty"`
+	AutoLoadbalance     bool   `json:"auto_loadbalance"`
 	Weight              uint   `json:"weight,omitempty"`
-	RequestCondition    string `json:"request_condition,omitempty"`
-	HealthCheck         string `json:"healthcheck,omitempty"`
-	Hostname            string `json:"hostname,omitempty"`
-	IPV4                string `json:"ipv4,omitempty"` // TODO net.IP type these.
-	IPV6                string `json:"ipv6,omitempty"`
-	UseSSL              bool   `json:"use_ssl,omitempty"`
-	SSLCheckCert        bool   `json:"ssl_check_cert,omitempty"`
-	SSLHostname         string `json:"ssl_hostname,omitempty"`
-	SSLCertHostname     string `json:"ssl_cert_hostname,omitempty"`
-	SSLSNIHostname      string `json:"ssl_sni_hostname,omitempty"`
-	MinTLSVersion       string `json:"min_tls_version,omitempty"`
-	MaxTLSVersion       string `json:"max_tls_version,omitempty"`
-	SSLCiphers          string `json:"ssl_ciphers,omitempty"`
+	RequestCondition    string `json:"request_condition"`
+	HealthCheck         string `json:"healthcheck"`
+	UseSSL              bool   `json:"use_ssl"`
+	SSLCheckCert        bool   `json:"ssl_check_cert"`
+	SSLCertHostname     string `json:"ssl_cert_hostname"`
+	SSLSNIHostname      string `json:"ssl_sni_hostname"`
+
+	// These attributes are all related. Do not zero them out.
+	Address  string `json:"address,omitempty"`
+	Hostname string `json:"hostname,omitempty"`
+	IPV4     string `json:"ipv4,omitempty"` // TODO net.IP type these.
+	IPV6     string `json:"ipv6,omitempty"`
+
+	// These cannot be set to ''
+	SSLHostname   string `json:"ssl_hostname,omitempty"`
+	SSLCiphers    string `json:"ssl_ciphers,omitempty"`
+	MinTLSVersion string `json:"min_tls_version,omitempty"`
+	MaxTLSVersion string `json:"max_tls_version,omitempty"`
 
 	// Somehow different?
-	Shield string `json:"shield,omitempty"`
+	Shield string `json:"shield"`
 }
 
 // backendsByName is a sortable list of backends.
