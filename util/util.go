@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/alienth/go-fastly"
+	"github.com/pmezard/go-difflib/difflib"
 	"github.com/urfave/cli"
 )
 
@@ -92,7 +93,7 @@ func ActivateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v
 		return err
 	}
 	assumeYes := c.GlobalBool("assume-yes")
-	diff, _, err := client.Diff.Get(s.ID, activeVersion, v.Number, "text")
+	diff, err := GetUnifiedDiff(client, s, activeVersion, v.Number)
 	if err != nil {
 		return err
 	}
@@ -103,7 +104,7 @@ func ActivateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v
 	}
 	pager := GetPager()
 
-	additions, removals := CountChanges(&diff.Diff)
+	additions, removals := CountChanges(&diff)
 	var proceed bool
 	if !assumeYes {
 		if proceed, err = Prompt(fmt.Sprintf("%d additions and %d removals in diff. View?", additions, removals)); err != nil {
@@ -124,25 +125,27 @@ func ActivateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v
 				pager.Run()
 			}()
 
-			fmt.Fprintf(stdin, diff.Diff)
+			fmt.Fprintf(stdin, diff)
 			stdin.Close()
 			<-c
 		} else {
 			fmt.Printf("Diff for %s:\n\n", s.Name)
-			fmt.Println(diff.Diff)
+			fmt.Println(diff)
 		}
 	}
 
-	if !assumeYes {
-		if proceed, err = Prompt("Activate version " + strconv.Itoa(int(v.Number)) + " for service " + s.Name + "?"); err != nil {
-			return err
+	if !c.Bool("noop") {
+		if !assumeYes {
+			if proceed, err = Prompt("Activate version " + strconv.Itoa(int(v.Number)) + " for service " + s.Name + "?"); err != nil {
+				return err
+			}
 		}
-	}
-	if proceed || assumeYes {
-		if _, _, err = client.Version.Activate(s.ID, v.Number); err != nil {
-			return err
+		if proceed || assumeYes {
+			if _, _, err = client.Version.Activate(s.ID, v.Number); err != nil {
+				return err
+			}
+			fmt.Printf("Activated version %d for %s. Old version: %d\n", v.Number, s.Name, activeVersion)
 		}
-		fmt.Printf("Activated version %d for %s. Old version: %d\n", v.Number, s.Name, activeVersion)
 	}
 	return nil
 }
@@ -176,6 +179,29 @@ func VersionsEqual(c *fastly.Client, s *fastly.Service, from, to uint) (bool, er
 		return false, err
 	}
 	return noDiff.Diff == diff.Diff, nil
+}
+
+func GetUnifiedDiff(c *fastly.Client, s *fastly.Service, from, to uint) (string, error) {
+	var fromConfig, toConfig *fastly.Diff
+	var err error
+	if fromConfig, _, err = c.Diff.Get(s.ID, from, from, "text"); err != nil {
+		return "", err
+	}
+	if toConfig, _, err = c.Diff.Get(s.ID, to, to, "text"); err != nil {
+		return "", err
+	}
+
+	diff := difflib.UnifiedDiff{
+		A:       difflib.SplitLines(fromConfig.Diff),
+		B:       difflib.SplitLines(toConfig.Diff),
+		Context: 3,
+	}
+	unified, err := difflib.GetUnifiedDiffString(diff)
+	if err != nil {
+		return unified, err
+	}
+
+	return unified, nil
 }
 
 func StringInSlice(check string, slice []string) bool {

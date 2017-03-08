@@ -1189,7 +1189,6 @@ func syncConfig(c *cli.Context) error {
 		return cli.NewExitError(fmt.Sprintf("Error listing services: %s", err), -1)
 	}
 
-	noop := c.Bool("noop")
 	foundService := false
 	// TODO Prompt if a version requested to be updated does not exist in Fastly, or
 	// provide a way to autocreate it.
@@ -1210,10 +1209,8 @@ func syncConfig(c *cli.Context) error {
 			if err = util.ValidateVersion(client, s, version.Number); err != nil {
 				return cli.NewExitError(err.Error(), -1)
 			}
-			if !noop {
-				if err = util.ActivateVersion(c, client, s, &version); err != nil {
-					return cli.NewExitError(fmt.Sprintf("Error activating pending version %s for service %s: %s", version.Number, s.Name, err), -1)
-				}
+			if err = util.ActivateVersion(c, client, s, &version); err != nil {
+				return cli.NewExitError(fmt.Sprintf("Error activating pending version %s for service %s: %s", version.Number, s.Name, err), -1)
 			}
 		}
 	}
