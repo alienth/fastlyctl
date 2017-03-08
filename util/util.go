@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"os/exec"
 	"regexp"
@@ -103,6 +104,8 @@ func ActivateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v
 		return cli.NewExitError(ErrNonInteractive.Error(), -1)
 	}
 	pager := GetPager()
+
+	fmt.Printf("Diff URL: %s\n", GetDiffUrl(s, activeVersion, v.Number).String())
 
 	additions, removals := CountChanges(&diff)
 	var proceed bool
@@ -241,4 +244,9 @@ func GetFastlyKey() string {
 		return string(contents)
 	}
 	return ""
+}
+
+func GetDiffUrl(s *fastly.Service, from, to uint) *url.URL {
+	u, _ := url.Parse(fmt.Sprintf("https://manage.fastly.com/configure/services/%s/diff/%d,%d", s.ID, from, to))
+	return u
 }
