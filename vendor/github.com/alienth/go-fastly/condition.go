@@ -34,11 +34,11 @@ func (s *ConditionType) UnmarshalText(b []byte) error {
 func (s *ConditionType) MarshalText() ([]byte, error) {
 	switch *s {
 	case ConditionTypeRequest:
-		return []byte("request"), nil
+		return []byte("REQUEST"), nil
 	case ConditionTypeResponse:
-		return []byte("response"), nil
+		return []byte("RESPONSE"), nil
 	case ConditionTypeCache:
-		return []byte("cache"), nil
+		return []byte("CACHE"), nil
 	}
 	return nil, nil
 }
@@ -91,7 +91,7 @@ func (c *ConditionConfig) List(serviceID string, version uint) ([]*Condition, *h
 
 // Get fetches a specific condition by name.
 func (c *ConditionConfig) Get(serviceID string, version uint, name string) (*Condition, *http.Response, error) {
-	u := fmt.Sprintf("/service/%s/version/%d/condition/%s", serviceID, version, url.QueryEscape(name))
+	u := fmt.Sprintf("/service/%s/version/%d/condition/%s", serviceID, version, url.PathEscape(name))
 
 	req, err := c.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -126,7 +126,7 @@ func (c *ConditionConfig) Create(serviceID string, version uint, condition *Cond
 
 // Update a cache condition
 func (c *ConditionConfig) Update(serviceID string, version uint, name string, condition *Condition) (*Condition, *http.Response, error) {
-	u := fmt.Sprintf("/service/%s/version/%d/condition/%s", serviceID, version, url.QueryEscape(name))
+	u := fmt.Sprintf("/service/%s/version/%d/condition/%s", serviceID, version, url.PathEscape(name))
 
 	req, err := c.client.NewJSONRequest("PUT", u, condition)
 	if err != nil {
@@ -144,7 +144,7 @@ func (c *ConditionConfig) Update(serviceID string, version uint, name string, co
 
 // Delete a cache condition
 func (c *ConditionConfig) Delete(serviceID string, version uint, name string) (*http.Response, error) {
-	u := fmt.Sprintf("/service/%s/version/%d/condition/%s", serviceID, version, url.QueryEscape(name))
+	u := fmt.Sprintf("/service/%s/version/%d/condition/%s", serviceID, version, url.PathEscape(name))
 
 	req, err := c.client.NewRequest("DELETE", u, nil)
 	if err != nil {

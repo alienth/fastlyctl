@@ -16,7 +16,7 @@ type Syslog struct {
 	Address           string      `json:"address,omitempty"`
 	Port              uint        `json:"port,string,omitempty"`
 	UseTLS            Compatibool `json:"use_tls"`
-	TLSCACert         string      `json:"tls_ca_cert"`
+	TLSCACert         string      `json:"tls_ca_cert,omitempty"` // Cannot be ''
 	TLSHostname       string      `json:"tls_hostname"`
 	Token             string      `json:"token"`
 	Format            string      `json:"format"`
