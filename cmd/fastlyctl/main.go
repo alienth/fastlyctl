@@ -69,6 +69,9 @@ func main() {
 				if c.GlobalBool("debug") {
 					log.EnableDebug()
 				}
+				if c.Bool("noop") {
+					fmt.Printf("!!! Running in no-op mode. Changes will be prepared, but not activated.\n\n")
+				}
 				return nil
 			},
 			Action: syncConfig,
