@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/alienth/fastlyctl/_version"
 	"github.com/alienth/fastlyctl/log"
 	"github.com/alienth/fastlyctl/util"
 	"github.com/alienth/go-fastly"
@@ -99,7 +100,7 @@ func readConfig(file string) error {
 	return nil
 }
 
-const versionComment string = "fastly-ctl"
+var versionComment = "fastlyctl-" + version.FullVersion()
 
 func prepareNewVersion(client *fastly.Client, s *fastly.Service) (fastly.Version, error) {
 	// See if we've already prepared a version
