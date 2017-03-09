@@ -156,13 +156,22 @@ func ActivateVersion(c *cli.Context, client *fastly.Client, s *fastly.Service, v
 // validateVersion takes in a service and version number and returns an
 // error if the version is invalid.
 func ValidateVersion(client *fastly.Client, service *fastly.Service, version uint) error {
-	// TODO verify this logic
-	_, err := client.Version.Validate(service.ID, version)
+	validationResponse, _, err := client.Version.Validate(service.ID, version)
 	if err != nil {
 		return fmt.Errorf("Error validating version: %s", err)
 	}
-	fmt.Printf("Version %d on service %s successfully validated!\n", version, service.Name)
-	return nil
+
+	if validationResponse.Status == "error" {
+		return fmt.Errorf("Validation error: %s", validationResponse.Message)
+	} else if len(validationResponse.Warnings) > 0 {
+		fmt.Printf("Validation warning: %s\n", validationResponse.Message)
+		return nil
+	} else if validationResponse.Status == "ok" {
+		fmt.Printf("Version %d on service %s successfully validated!\n", version, service.Name)
+		return nil
+	}
+
+	return fmt.Errorf("Unexpected validation response: %+v", validationResponse)
 }
 
 // Returns true if two versions of a given service are identical.  Generated

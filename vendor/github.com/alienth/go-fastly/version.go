@@ -70,20 +70,28 @@ func (c *VersionConfig) Get(serviceID string, versionNumber uint) (*Version, *ht
 	return v, resp, nil
 }
 
+type ValidateResponse struct {
+	Message  string   `json:"msg"` // Will contain whatever is in Warnings or Errors.
+	Status   string   // Not sure what all possible values exist for this. "ok" and "error" are known ones.
+	Warnings []string // If any Errors exist, this will be empty. Only contains a single warning, even if more exist.
+	Errors   []string // Only contains a single error, even if more exist.
+}
+
 // Validate validates a specific version.
-func (c *VersionConfig) Validate(serviceID string, versionNumber uint) (*http.Response, error) {
+func (c *VersionConfig) Validate(serviceID string, versionNumber uint) (*ValidateResponse, *http.Response, error) {
 	u := fmt.Sprintf("/service/%s/version/%d/validate", serviceID, versionNumber)
 
 	req, err := c.client.NewRequest("GET", u, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	resp, err := c.client.Do(req, nil)
+	validateResp := new(ValidateResponse)
+	resp, err := c.client.Do(req, validateResp)
 	if err != nil {
-		return resp, err
+		return nil, resp, err
 	}
-	return resp, nil
+	return validateResp, resp, nil
 }
 
 // Activate activates a specific version.

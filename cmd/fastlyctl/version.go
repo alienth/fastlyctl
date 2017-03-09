@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"strconv"
 
 	"github.com/alienth/fastlyctl/util"
@@ -43,15 +42,8 @@ func versionValidate(c *cli.Context) error {
 		return cli.NewExitError(err.Error(), -1)
 	}
 
-	resp, err := client.Version.Validate(service.ID, uint(version))
-	if err != nil {
+	if err := util.ValidateVersion(client, service, uint(version)); err != nil {
 		return cli.NewExitError(err.Error(), -1)
-	}
-
-	if resp.StatusCode == http.StatusOK {
-		fmt.Printf("Version %d on service %s successfully validated!\n", version, serviceParam)
-	} else {
-		return cli.NewExitError(fmt.Sprintf("Version %d on service %s failed to validate\n", version, serviceParam), -1)
 	}
 
 	return nil
