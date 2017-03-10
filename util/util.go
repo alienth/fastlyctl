@@ -161,13 +161,14 @@ func ValidateVersion(client *fastly.Client, service *fastly.Service, version uin
 		return fmt.Errorf("Error validating version: %s", err)
 	}
 
+	prefix := fmt.Sprintf("Version %d on service %s", version, service.Name)
 	if validationResponse.Status == "error" {
-		return fmt.Errorf("Validation error: %s", validationResponse.Message)
+		return fmt.Errorf("%s failed to validate:\n%s\n", prefix, validationResponse.Message)
 	} else if len(validationResponse.Warnings) > 0 {
-		fmt.Printf("Validation warning: %s\n", validationResponse.Message)
+		fmt.Printf("%s validated with warniings:\n%s\n", prefix, validationResponse.Message)
 		return nil
 	} else if validationResponse.Status == "ok" {
-		fmt.Printf("Version %d on service %s successfully validated!\n", version, service.Name)
+		fmt.Printf("%s successfully validated!\n", prefix)
 		return nil
 	}
 
