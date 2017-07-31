@@ -1191,9 +1191,11 @@ func syncConfig(c *cli.Context) error {
 	}
 
 	foundService := false
-	// TODO Prompt if a version requested to be updated does not exist in Fastly, or
-	// provide a way to autocreate it.
+
+	servicesPresent := make(map[string]bool)
+
 	for _, s := range services {
+		servicesPresent[s.Name] = true
 		// Only configure services for which configs have been specified
 		if _, ok := siteConfigs[s.Name]; !ok {
 			continue
@@ -1217,6 +1219,12 @@ func syncConfig(c *cli.Context) error {
 	}
 	if !foundService {
 		return cli.NewExitError(fmt.Sprintf("No matching services could be found to be sync'd."), -1)
+	}
+
+	for name, _ := range siteConfigs {
+		if _, ok := servicesPresent[name]; !ok {
+			return cli.NewExitError(fmt.Sprintf("Service %s is defined in configuration, but does not exist in Fastly. You must create the service in Fastly before it can be managed by this utility.", name), -1)
+		}
 	}
 	return nil
 }
