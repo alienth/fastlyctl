@@ -143,6 +143,7 @@ func syncVCLs(client *fastly.Client, s *fastly.Service, vcls []VCL) error {
 	}
 
 	var newVCLs []fastly.VCL
+	var mismatchedVCLs []fastly.VCL
 
 	for _, vcl := range vcls {
 		if vcl == (VCL{}) {
@@ -184,9 +185,11 @@ func syncVCLs(client *fastly.Client, s *fastly.Service, vcls []VCL) error {
 				match = true
 				break
 			} else if vcl.Name == newVCL.Name {
-				log.Debug(fmt.Sprintf("Found mismatched existing vcl %s. Updating.\n", vcl.Name))
-				if _, _, err := client.VCL.Update(s.ID, newversion.Number, vcl.Name, &newVCL); err != nil {
-					return err
+				// Main VCL files must be updated *last*, to account for any include changes.
+				if vcl.Main {
+					mismatchedVCLs = append(mismatchedVCLs, newVCL)
+				} else {
+					mismatchedVCLs = append([]fastly.VCL{newVCL}, mismatchedVCLs...)
 				}
 				newVCLs = append(newVCLs[:i], newVCLs[i+1:]...)
 				match = true
@@ -202,10 +205,26 @@ func syncVCLs(client *fastly.Client, s *fastly.Service, vcls []VCL) error {
 		}
 	}
 
+	// New VCL creation must be done before we update existing VCLs.
+	// Otherwise, any existing VCLs which `include` a new VCL file will
+	// fail when being written to Fastly.
 	for _, vcl := range newVCLs {
 		log.Debug(fmt.Sprintf("Creating missing vcl %s.\n", vcl.Name))
 		_, _, err := client.VCL.Create(s.ID, newversion.Number, &vcl)
 		if err != nil {
+			return err
+		}
+	}
+
+	// Furthermore, if an included file should have an include which is
+	// changed, those changes must be sync'd *before* the Main VCL is
+	// sync'd. If the Main VCL file is sync'd before, Fastly will
+	// immediately validate and any unestablished includes will result in a
+	// failure. For this reason, any Main changes are appended to the
+	// mismatchedVCLs list, and all other changes are prepended.
+	for _, vcl := range mismatchedVCLs {
+		log.Debug(fmt.Sprintf("Found mismatched existing vcl %s. Updating.\n", vcl.Name))
+		if _, _, err := client.VCL.Update(s.ID, newversion.Number, vcl.Name, &vcl); err != nil {
 			return err
 		}
 	}
