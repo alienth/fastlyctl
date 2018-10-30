@@ -73,8 +73,8 @@ func (c *VersionConfig) Get(serviceID string, versionNumber uint) (*Version, *ht
 type ValidateResponse struct {
 	Message  string   `json:"msg"` // Will contain whatever is in Warnings or Errors.
 	Status   string   // Not sure what all possible values exist for this. "ok" and "error" are known ones.
-	Warnings []string // If any Errors exist, this will be empty. Only contains a single warning, even if more exist.
-	Errors   []string // Only contains a single error, even if more exist.
+	Warnings []string // If any Errors exist, this will be empty. Only contains a single element, even if more exist.
+	Errors   []string // Only contains a single element at max. If warnings and errors are present, they are concatenated together in that one element.
 }
 
 // Validate validates a specific version.

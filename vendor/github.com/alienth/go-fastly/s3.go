@@ -8,22 +8,62 @@ import (
 
 type S3Config config
 
+// https://docs.fastly.com/api/logging#logging_s3
 type S3 struct {
 	ServiceID string `json:"service_id,omitempty"`
 	Version   uint   `json:"version,string,omitempty"`
 
-	Name              string `json:"name,omitempty"`
-	BucketName        string `json:"bucket_name,omitempty"`
-	Domain            string `json:"domain"`
-	AccessKey         string `json:"access_key,omitempty"`
-	SecretKey         string `json:"secret_key,omitempty"`
-	Path              string `json:"path"`
-	Period            uint   `json:"period,string,omitempty"`
-	GzipLevel         uint   `json:"gzip_level,string"`
-	Format            string `json:"format"`
-	ResponseCondition string `json:"response_condition"`
-	TimestampFormat   string `json:"timestamp_format"`
-	Redundancy        string `json:"redundancy"`
+	Name              string      `json:"name,omitempty"`
+	BucketName        string      `json:"bucket_name,omitempty"`
+	Domain            string      `json:"domain"`
+	AccessKey         string      `json:"access_key,omitempty"`
+	SecretKey         string      `json:"secret_key,omitempty"`
+	Path              string      `json:"path"`
+	Period            uint        `json:"period,string,omitempty"`
+	GzipLevel         uint        `json:"gzip_level,string"`
+	Format            string      `json:"format"`
+	ResponseCondition string      `json:"response_condition"`
+	TimestampFormat   string      `json:"timestamp_format"`
+	Redundancy        string      `json:"redundancy"`
+	MessageType       MessageType `json:"message_type"`
+}
+
+type MessageType int
+
+const (
+	_                              = iota
+	MessageTypeClassic MessageType = iota
+	MessageTypeLoggly
+	MessageTypeLogplex
+	MessageTypeBlank
+)
+
+func (s *MessageType) UnmarshalText(b []byte) error {
+	switch string(b) {
+	case "classic":
+		*s = MessageTypeClassic
+	case "loggly":
+		*s = MessageTypeLoggly
+	case "logplex":
+		*s = MessageTypeLogplex
+	case "blank":
+		*s = MessageTypeBlank
+	}
+	return nil
+}
+
+func (s *MessageType) MarshalText() ([]byte, error) {
+	switch *s {
+	case MessageTypeClassic:
+		return []byte("classic"), nil
+	case MessageTypeLoggly:
+		return []byte("loggly"), nil
+	case MessageTypeLogplex:
+		return []byte("logplex"), nil
+	case MessageTypeBlank:
+		return []byte("blank"), nil
+	}
+	return nil, nil
 }
 
 // s3sByName is a sortable list of s3s.
