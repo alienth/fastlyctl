@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/alienth/fastlyctl/_version"
+	versionInfo "github.com/alienth/fastlyctl/_version"
 	"github.com/alienth/fastlyctl/log"
 	"github.com/alienth/fastlyctl/util"
 	"github.com/alienth/go-fastly"
@@ -100,7 +100,7 @@ func readConfig(file string) error {
 	return nil
 }
 
-var versionComment = "fastlyctl-" + version.FullVersion()
+var versionComment = "fastlyctl-" + versionInfo.FullVersion()
 
 func prepareNewVersion(client *fastly.Client, s *fastly.Service) (fastly.Version, error) {
 	// See if we've already prepared a version
@@ -1053,20 +1053,21 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 	// regardless of diff results. Some changes, such as ACL and Dict
 	// creation, have no affect on the diff.
 	var changesMade bool
+	var dictionaryChangesMade, aclChangesMade, backendChangesMade bool
 	// Dictionaries, Conditions, health checks, and cache settings must be
 	// sync'd first, as if they're referenced in any other object the API
 	// will balk if they don't exist.
 	log.Debug("Syncing Dictionaries\n")
 	dictionaries := make([]fastly.Dictionary, len(config.Dictionaries))
 	copy(dictionaries, config.Dictionaries)
-	if changesMade, err = syncDictionaries(client, s, dictionaries); err != nil {
+	if dictionaryChangesMade, err = syncDictionaries(client, s, dictionaries); err != nil {
 		return fmt.Errorf("Error syncing Dictionaries: %s", err)
 	}
 
 	log.Debug("Syncing ACLs\n")
 	acls := make([]fastly.ACL, len(config.ACLs))
 	copy(acls, config.ACLs)
-	if changesMade, err = syncACLs(client, s, acls); err != nil {
+	if aclChangesMade, err = syncACLs(client, s, acls); err != nil {
 		return fmt.Errorf("Error syncing ACLs: %s", err)
 	}
 
@@ -1108,7 +1109,7 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 	log.Debug("Syncing backends\n")
 	backends := make([]fastly.Backend, len(config.Backends))
 	copy(backends, config.Backends)
-	if changesMade, err = syncBackends(client, s, backends); err != nil {
+	if backendChangesMade, err = syncBackends(client, s, backends); err != nil {
 		return fmt.Errorf("Error syncing backends: %s", err)
 	}
 
@@ -1158,6 +1159,8 @@ func syncService(client *fastly.Client, s *fastly.Service) error {
 	if err := syncVCLs(client, s, vcls); err != nil {
 		return fmt.Errorf("Error syncing VCLs: %s", err)
 	}
+
+	changesMade = backendChangesMade || dictionaryChangesMade || aclChangesMade
 
 	if version, ok := pendingVersions[s.ID]; ok {
 		equal, err := util.VersionsEqual(client, s, activeVersion, version.Number)
@@ -1214,6 +1217,13 @@ func syncConfig(c *cli.Context) error {
 			}
 			if err = util.ActivateVersion(c, client, s, &version); err != nil {
 				return cli.NewExitError(fmt.Sprintf("Error activating pending version %s for service %s: %s", version.Number, s.Name, err), -1)
+			}
+
+			// If we didn't activate this version we want to lock it to make sure a future change doesn't interfere
+			//   with out dictionaries or anything else that might get recreated
+			if c.Bool("noop") {
+				fmt.Println("Locking version ", version.Number, " for ", s.Name)
+				client.Version.Lock(s.ID, version.Number)
 			}
 		}
 	}
