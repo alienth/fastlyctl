@@ -26,7 +26,7 @@ steps:
     password:
       from_secret: docker_password
     tag:
-    - ${DRONE_BRANCH}
+    - ${DRONE_TAG}
     - ${DRONE_COMMIT_SHA}
   when:
     event:
