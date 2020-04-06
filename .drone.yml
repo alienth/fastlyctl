@@ -1,0 +1,69 @@
+kind: pipeline
+name: default
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: test
+  pull: if-not-exists
+  image: golang:1.14.1-buster
+  commands:
+  - go test ./...
+  when:
+    event:
+    - push
+    - pull_request
+    - tag
+
+- name: publish-docker-image-to-artifactory
+  image: artifactory.build.ue1.snooguts.net/reddit-docker-prod/drone-plugin-docker
+  settings:
+    registry: artifactory.build.ue1.snooguts.net
+    repo: artifactory.build.ue1.snooguts.net/reddit-docker-prod/fastlyctl
+    username: drone
+    password:
+      from_secret: docker_password
+    tag:
+    - ${DRONE_BRANCH}
+    - ${DRONE_COMMIT_SHA}
+  when:
+    event:
+    - push
+  depends_on:
+    - test
+
+- name: notify-slack
+  pull: if-not-exists
+  image: 258875347723.dkr.ecr.us-east-1.amazonaws.com/drone-plugin-slack
+  settings:
+    channel: infra-salon
+  environment:
+    SLACK_WEBHOOK:
+      from_secret: slack_webhook
+  when:
+    branch:
+    - master
+    event:
+    - push
+    status:
+    - failure
+    - success
+  depends_on:
+    - publish-docker-image-to-artifactory
+
+---
+kind: secret
+name: slack_webhook
+
+get:
+  path: secret/drone/common/slack_webhook
+
+---
+kind: secret
+name: docker_password
+
+get:
+  path: secret/artifactory/drone/password
+

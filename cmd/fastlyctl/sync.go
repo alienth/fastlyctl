@@ -1216,7 +1216,7 @@ func syncConfig(c *cli.Context) error {
 				return cli.NewExitError(err.Error(), -1)
 			}
 			if err = util.ActivateVersion(c, client, s, &version); err != nil {
-				return cli.NewExitError(fmt.Sprintf("Error activating pending version %s for service %s: %s", version.Number, s.Name, err), -1)
+				return cli.NewExitError(fmt.Sprintf("Error activating pending version %d for service %s: %s", version.Number, s.Name, err), -1)
 			}
 
 			// If we didn't activate this version we want to lock it to make sure a future change doesn't interfere
