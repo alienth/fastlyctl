@@ -31,6 +31,7 @@ steps:
   when:
     event:
     - push
+    - tag
   depends_on:
     - test
 
