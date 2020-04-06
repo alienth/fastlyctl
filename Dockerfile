@@ -13,5 +13,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
 
 FROM ubuntu
 
+RUN apt-get update && apt-get install -y ca-certificates
+
 COPY --from=build /build/fastlyctl /
 ENTRYPOINT ["/fastlyctl"]
