@@ -27,10 +27,8 @@ steps:
       from_secret: docker_password
     tag:
     - ${DRONE_TAG}
-    - ${DRONE_COMMIT_SHA}
   when:
     event:
-    - push
     - tag
   depends_on:
     - test
