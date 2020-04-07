@@ -1,9 +1,9 @@
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
-github.com/alienth/go-fastly v0.0.0-20180331033511-6cc0b0be1c71 h1:rA4FGvjlnEYp6dzOlZkhkZNauvJL4c2AZ8DoIWe24+4=
-github.com/alienth/go-fastly v0.0.0-20180331033511-6cc0b0be1c71/go.mod h1:IEHiATqLBVeZ0ijFEnfMMftgSTXr3e98IZfJZafIKEg=
 github.com/alienth/go-fastly v0.0.0-20200406192040-f929ee82652d h1:PICNxAW6n1dErqrDD8V3LTjki1iJpG+6JuHvppdComk=
 github.com/alienth/go-fastly v0.0.0-20200406192040-f929ee82652d/go.mod h1:IEHiATqLBVeZ0ijFEnfMMftgSTXr3e98IZfJZafIKEg=
+github.com/alienth/go-fastly v0.0.0-20200407170811-227f037a65e1 h1:HKQ8lIKSmfgg1p3fpi53W0qYtgyE+OvYvpgcvXJFzPs=
+github.com/alienth/go-fastly v0.0.0-20200407170811-227f037a65e1/go.mod h1:IEHiATqLBVeZ0ijFEnfMMftgSTXr3e98IZfJZafIKEg=
 github.com/imdario/mergo v0.0.0-20160517064435-50d4dbd4eb0e h1:zIX9lnwsSCcX3oc3J5w16I+3zmf6a+vdf80ygUqpah8=
 github.com/imdario/mergo v0.0.0-20160517064435-50d4dbd4eb0e/go.mod h1:2EnlNZ0deacrJVfApfmtdGgDfMuh/nq6Ok1EcJh5FfA=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

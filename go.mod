@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/BurntSushi/toml v0.3.1
-	github.com/alienth/go-fastly v0.0.0-20200406192040-f929ee82652d
+	github.com/alienth/go-fastly v0.0.0-20200407170811-227f037a65e1
 	github.com/imdario/mergo v0.0.0-20160517064435-50d4dbd4eb0e
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/urfave/cli v1.18.0
