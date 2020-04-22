@@ -8,7 +8,7 @@ platform:
 steps:
 - name: test
   pull: if-not-exists
-  image: golang:1.14.1-buster
+  image: artifactory.build.ue1.snooguts.net/dockerhub-remote/golang:1.14.1-buster
   commands:
   - go test ./...
   when:
@@ -16,6 +16,15 @@ steps:
     - push
     - pull_request
     - tag
+
+- name: dependency-check-snyk
+  image: artifactory.build.ue1.snooguts.net/dockerhub-remote/snyk/snyk:golang
+  commands:
+  - snyk test --project-name="reddit/fastlyctl" --org="15fc3399-7643-4dd7-8046-b23718ff4254" --fail-on=upgradable
+  - snyk monitor --project-name="reddit/fastlyctl" --org="15fc3399-7643-4dd7-8046-b23718ff4254" -q
+  environment:
+    SNYK_TOKEN: 
+      from_secret: snyk_token
 
 - name: publish-docker-image-to-artifactory
   image: artifactory.build.ue1.snooguts.net/reddit-docker-prod/drone-plugin-docker
@@ -35,7 +44,7 @@ steps:
 
 - name: notify-slack
   pull: if-not-exists
-  image: 258875347723.dkr.ecr.us-east-1.amazonaws.com/drone-plugin-slack
+  image: artifactory.build.ue1.snooguts.net/reddit-docker-prod/drone-plugin-slack
   settings:
     channel: infra-salon
   environment:
@@ -66,3 +75,9 @@ name: docker_password
 get:
   path: secret/artifactory/drone/password
 
+---
+kind: secret
+name: snyk_token
+
+get:
+  path: secret/snyk/drone-api-token
